@@ -9,7 +9,6 @@ import { MainLayout } from "./components/layout/main-layout";
 import Login from "./pages/auth/login";
 import Dashboard from "./pages/dashboard/index";
 import CoursesList from "./pages/courses/index";
-import CourseBuilder from "./pages/courses/builder";
 import CourseGenerator from "./pages/courses/generator";
 import CoursePlayer from "./pages/courses/player";
 import SpeakingCoach from "./pages/speaking/index";
@@ -44,7 +43,6 @@ function Router() {
       <ProtectedRoute path="/notifications" component={Notifications} />
       <ProtectedRoute path="/courses" component={CoursesList} />
       <ProtectedRoute path="/learning" component={CoursesList} />
-      <ProtectedRoute path="/builder" component={CourseBuilder} />
       <ProtectedRoute path="/generator" component={CourseGenerator} />
       <ProtectedRoute path="/courses/:id" component={CoursePlayer} />
       <ProtectedRoute path="/speaking" component={SpeakingCoach} />

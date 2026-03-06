@@ -7,7 +7,6 @@ import {
   GraduationCap,
   Settings,
   ShieldAlert,
-  FolderKanban,
   Mic,
   Wand2,
   Activity,
@@ -43,8 +42,7 @@ export function AppSidebar() {
     { title: "Speaking Coach", icon: Mic, url: "/speaking", roles: ["employee", "manager", "l_and_d"] },
     { title: "Course Library", icon: BookOpen, url: "/courses", roles: ["l_and_d", "employee"] },
     { title: "Team Progress", icon: Users, url: "/team", roles: ["manager", "l_and_d"] },
-    { title: "Course Builder", icon: FolderKanban, url: "/builder", roles: ["l_and_d"] },
-    { title: "AI Generator", icon: Wand2, url: "/generator", roles: ["l_and_d"] },
+    { title: "AI Course Builder", icon: Wand2, url: "/generator", roles: ["l_and_d"] },
   ];
 
   const visibleRoutes = routes.filter(r => r.roles.includes(role));

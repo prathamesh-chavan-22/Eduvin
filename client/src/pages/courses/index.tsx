@@ -26,7 +26,7 @@ export default function CoursesList() {
         </div>
         {isLnd && (
           <Button asChild className="shadow-md shadow-primary/20 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-            <Link href="/builder">
+            <Link href="/generator">
               <Plus className="w-4 h-4 mr-2" /> Create Course
             </Link>
           </Button>
