@@ -18,8 +18,10 @@ import {
   type UpdateEnrollmentProgressRequest,
   type CourseResponse,
   type EnrollmentResponse,
+  type SpeakingPractice,
+  type InsertSpeakingPractice,
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -47,6 +49,10 @@ export interface IStorage {
   getNotifications(userId: number): Promise<Notification[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationRead(id: number): Promise<Notification>;
+
+  // Speaking Practice
+  getSpeakingPractices(userId: number): Promise<SpeakingPractice[]>;
+  createSpeakingPractice(practice: InsertSpeakingPractice): Promise<SpeakingPractice>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -165,6 +171,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(notifications.id, id))
       .returning();
     return notification;
+  }
+
+  async getSpeakingPractices(userId: number): Promise<SpeakingPractice[]> {
+    return await db
+      .select()
+      .from(speakingPractices)
+      .where(eq(speakingPractices.userId, userId))
+      .orderBy(desc(speakingPractices.createdAt));
+  }
+
+  async createSpeakingPractice(practice: InsertSpeakingPractice): Promise<SpeakingPractice> {
+    const [result] = await db.insert(speakingPractices).values(practice).returning();
+    return result;
   }
 }
 

@@ -10,7 +10,9 @@ import Login from "./pages/auth/login";
 import Dashboard from "./pages/dashboard/index";
 import CoursesList from "./pages/courses/index";
 import CourseBuilder from "./pages/courses/builder";
+import CourseGenerator from "./pages/courses/generator";
 import CoursePlayer from "./pages/courses/player";
+import SpeakingCoach from "./pages/speaking/index";
 import TeamManagement from "./pages/team/index";
 
 function ProtectedRoute({ component: Component, ...rest }: any) {
@@ -33,7 +35,9 @@ function Router() {
       <ProtectedRoute path="/courses" component={CoursesList} />
       <ProtectedRoute path="/learning" component={CoursesList} />
       <ProtectedRoute path="/builder" component={CourseBuilder} />
+      <ProtectedRoute path="/generator" component={CourseGenerator} />
       <ProtectedRoute path="/courses/:id" component={CoursePlayer} />
+      <ProtectedRoute path="/speaking" component={SpeakingCoach} />
       <ProtectedRoute path="/team" component={TeamManagement} />
       
       <Route component={NotFound} />

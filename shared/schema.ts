@@ -19,6 +19,9 @@ export const courses = pgTable("courses", {
   status: text("status").notNull().default("draft"), // 'draft', 'published'
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
+  objectives: text("objectives").array(),
+  audience: text("audience"),
+  depth: text("depth"), // 'beginner', 'intermediate', 'advanced'
 });
 
 export const courseModules = pgTable("course_modules", {
@@ -27,6 +30,7 @@ export const courseModules = pgTable("course_modules", {
   title: text("title").notNull(),
   content: text("content").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
+  quiz: text("quiz"), // JSON stringified quiz data
 });
 
 export const enrollments = pgTable("enrollments", {
@@ -48,10 +52,24 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const speakingPractices = pgTable("speaking_practices", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  prompt: text("prompt").notNull(),
+  transcript: text("transcript"),
+  audioUrl: text("audio_url"),
+  pronunciationScore: doublePrecision("pronunciation_score"),
+  fluencyScore: doublePrecision("fluency_score"),
+  feedback: text("feedback"),
+  corrections: text("corrections"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   courses: many(courses),
   enrollments: many(enrollments),
   notifications: many(notifications),
+  speakingPractices: many(speakingPractices),
 }));
 
 export const coursesRelations = relations(courses, ({ one, many }) => ({
@@ -73,11 +91,16 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
 }));
 
+export const speakingPracticesRelations = relations(speakingPractices, ({ one }) => ({
+  user: one(users, { fields: [speakingPractices.userId], references: [users.id] }),
+}));
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, createdAt: true });
 export const insertCourseModuleSchema = createInsertSchema(courseModules).omit({ id: true });
 export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({ id: true, startedAt: true, completedAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
+export const insertSpeakingPracticeSchema = createInsertSchema(speakingPractices).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -89,6 +112,8 @@ export type Enrollment = typeof enrollments.$inferSelect;
 export type InsertEnrollment = z.infer<typeof insertEnrollmentSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type SpeakingPractice = typeof speakingPractices.$inferSelect;
+export type InsertSpeakingPractice = z.infer<typeof insertSpeakingPracticeSchema>;
 
 // Request Types
 export type UpdateEnrollmentProgressRequest = { progressPct: number; status?: string };

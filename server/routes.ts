@@ -2,6 +2,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
+import { insertSpeakingPracticeSchema } from "@shared/schema";
 import { z } from "zod";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -222,6 +223,29 @@ export async function registerRoutes(
       res.json(notification);
     } catch (err) {
       res.status(404).json({ message: "Notification not found" });
+    }
+  });
+
+  // Speaking Practice Routes
+  app.get("/api/speaking", async (req, res) => {
+    const userId = (req.session as any).userId;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+    const practices = await storage.getSpeakingPractices(userId);
+    res.json(practices);
+  });
+
+  app.post("/api/speaking", async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const data = insertSpeakingPracticeSchema.parse({ ...req.body, userId });
+      const practice = await storage.createSpeakingPractice(data);
+      res.status(201).json(practice);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal error" });
     }
   });
 
