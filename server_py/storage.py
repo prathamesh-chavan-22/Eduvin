@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlalchemy import select, update, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import User, Course, CourseModule, Enrollment, Notification, SpeakingPractice
+from models import User, Course, CourseModule, Enrollment, Notification, SpeakingPractice, WorkflowAnalysis, AnalysisResult
 
 
 # --- Users ---
@@ -194,3 +194,80 @@ async def create_speaking_practice(db: AsyncSession, *, user_id: int, prompt: st
     await db.commit()
     await db.refresh(practice)
     return practice
+
+
+# --- Workflow Analysis ---
+
+
+async def get_analyses(db: AsyncSession, user_id: int) -> List[WorkflowAnalysis]:
+    result = await db.execute(
+        select(WorkflowAnalysis)
+        .where(WorkflowAnalysis.created_by == user_id)
+        .order_by(desc(WorkflowAnalysis.created_at))
+    )
+    return list(result.scalars().all())
+
+
+async def get_analysis(db: AsyncSession, analysis_id: int) -> dict | None:
+    result = await db.execute(select(WorkflowAnalysis).where(WorkflowAnalysis.id == analysis_id))
+    analysis = result.scalar_one_or_none()
+    if analysis is None:
+        return None
+    results = await get_analysis_results(db, analysis.id)
+    return {"analysis": analysis, "results": results}
+
+
+async def get_analysis_results(db: AsyncSession, analysis_id: int) -> List[AnalysisResult]:
+    result = await db.execute(
+        select(AnalysisResult).where(AnalysisResult.analysis_id == analysis_id)
+    )
+    return list(result.scalars().all())
+
+
+async def create_analysis(db: AsyncSession, *, created_by: int, filename: str,
+                           status: str = "processing", column_mapping: dict | None = None,
+                           total_employees: int = 0) -> WorkflowAnalysis:
+    analysis = WorkflowAnalysis(
+        created_by=created_by, filename=filename, status=status,
+        column_mapping=column_mapping, total_employees=total_employees,
+    )
+    db.add(analysis)
+    await db.commit()
+    await db.refresh(analysis)
+    return analysis
+
+
+async def update_analysis_status(db: AsyncSession, analysis_id: int,
+                                  status: str, total_employees: int | None = None,
+                                  column_mapping: dict | None = None) -> WorkflowAnalysis | None:
+    result = await db.execute(select(WorkflowAnalysis).where(WorkflowAnalysis.id == analysis_id))
+    analysis = result.scalar_one_or_none()
+    if analysis is None:
+        return None
+    analysis.status = status
+    if total_employees is not None:
+        analysis.total_employees = total_employees
+    if column_mapping is not None:
+        analysis.column_mapping = column_mapping
+    if status == "completed" or status == "failed":
+        analysis.completed_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(analysis)
+    return analysis
+
+
+async def create_analysis_result(db: AsyncSession, *, analysis_id: int, employee_name: str,
+                                  department: str | None = None, manager_remarks: str | None = None,
+                                  ai_summary: str | None = None, recommended_skills: list | None = None,
+                                  matched_course_ids: list | None = None,
+                                  suggested_trainings: list | None = None) -> AnalysisResult:
+    ar = AnalysisResult(
+        analysis_id=analysis_id, employee_name=employee_name, department=department,
+        manager_remarks=manager_remarks, ai_summary=ai_summary,
+        recommended_skills=recommended_skills, matched_course_ids=matched_course_ids,
+        suggested_trainings=suggested_trainings,
+    )
+    db.add(ar)
+    await db.commit()
+    await db.refresh(ar)
+    return ar

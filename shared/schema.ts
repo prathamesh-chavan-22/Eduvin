@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, json } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -65,6 +65,30 @@ export const speakingPractices = pgTable("speaking_practices", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const workflowAnalyses = pgTable("workflow_analyses", {
+  id: serial("id").primaryKey(),
+  createdBy: integer("created_by").references(() => users.id),
+  filename: text("filename").notNull(),
+  status: text("status").notNull().default("processing"),
+  columnMapping: json("column_mapping"),
+  totalEmployees: integer("total_employees").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const analysisResults = pgTable("analysis_results", {
+  id: serial("id").primaryKey(),
+  analysisId: integer("analysis_id").references(() => workflowAnalyses.id).notNull(),
+  employeeName: text("employee_name").notNull(),
+  department: text("department"),
+  managerRemarks: text("manager_remarks"),
+  aiSummary: text("ai_summary"),
+  recommendedSkills: json("recommended_skills"),
+  matchedCourseIds: json("matched_course_ids"),
+  suggestedTrainings: json("suggested_trainings"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   courses: many(courses),
   enrollments: many(enrollments),
@@ -95,12 +119,24 @@ export const speakingPracticesRelations = relations(speakingPractices, ({ one })
   user: one(users, { fields: [speakingPractices.userId], references: [users.id] }),
 }));
 
+export const workflowAnalysesRelations = relations(workflowAnalyses, ({ one, many }) => ({
+  creator: one(users, { fields: [workflowAnalyses.createdBy], references: [users.id] }),
+  results: many(analysisResults),
+}));
+
+export const analysisResultsRelations = relations(analysisResults, ({ one }) => ({
+  analysis: one(workflowAnalyses, { fields: [analysisResults.analysisId], references: [workflowAnalyses.id] }),
+}));
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, createdAt: true });
 export const insertCourseModuleSchema = createInsertSchema(courseModules).omit({ id: true });
 export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({ id: true, startedAt: true, completedAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export const insertSpeakingPracticeSchema = createInsertSchema(speakingPractices).omit({ id: true, createdAt: true });
+
+export const insertWorkflowAnalysisSchema = createInsertSchema(workflowAnalyses).omit({ id: true, createdAt: true, completedAt: true });
+export const insertAnalysisResultSchema = createInsertSchema(analysisResults).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -114,6 +150,11 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type SpeakingPractice = typeof speakingPractices.$inferSelect;
 export type InsertSpeakingPractice = z.infer<typeof insertSpeakingPracticeSchema>;
+
+export type WorkflowAnalysis = typeof workflowAnalyses.$inferSelect;
+export type InsertWorkflowAnalysis = z.infer<typeof insertWorkflowAnalysisSchema>;
+export type AnalysisResult = typeof analysisResults.$inferSelect;
+export type InsertAnalysisResult = z.infer<typeof insertAnalysisResultSchema>;
 
 // Request Types
 export type UpdateEnrollmentProgressRequest = { progressPct: number; status?: string };

@@ -1,210 +1,421 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UploadCloud, CheckCircle2, AlertTriangle, TrendingUp, Users, Target, ArrowRight } from "lucide-react";
+import {
+  UploadCloud, FileText, Users, BookOpen, Lightbulb, Clock,
+  CheckCircle2, AlertCircle, Loader2, ChevronDown, ChevronUp, ExternalLink,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
-
-// Mock data for the MVP
-const MOCK_SKILL_GAPS = [
-    { department: "Engineering", skill: "AWS Cloud Architecture", currentLevel: 45, targetLevel: 80, usersAffected: 12 },
-    { department: "Sales", skill: "Objection Handling", currentLevel: 60, targetLevel: 90, usersAffected: 8 },
-    { department: "Design", skill: "Accessibility Standards", currentLevel: 30, targetLevel: 75, usersAffected: 5 },
-    { department: "Marketing", skill: "Data Analytics", currentLevel: 55, targetLevel: 85, usersAffected: 7 },
-];
-
-const MOCK_RECOMMENDATIONS = [
-    { title: "Cloud Practitioner Certification Path", target: "Engineering", match: 95, status: "pending" },
-    { title: "Advanced Sales Techniques Q3", target: "Sales", match: 88, status: "pending" },
-    { title: "Inclusive UI Masterclass", target: "Design", match: 92, status: "approved" },
-];
+import { useAnalyses, useAnalysis, useUploadAnalysis } from "@/hooks/use-analysis";
+import type { AnalysisResult } from "@shared/schema";
 
 export default function WorkforceAnalysis() {
-    const { user } = useAuth();
-    const { toast } = useToast();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const [isUploading, setIsUploading] = useState(false);
-    const [hasData, setHasData] = useState(false);
-    const [recommendations, setRecommendations] = useState(MOCK_RECOMMENDATIONS);
+  const [selectedAnalysisId, setSelectedAnalysisId] = useState<number | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [isDragging, setIsDragging] = useState(false);
 
-    if (!user || user.role !== "l_and_d") {
-        return <Redirect to="/dashboard" />;
+  const { data: analyses, isLoading: isLoadingList } = useAnalyses();
+  const { data: analysisDetail } = useAnalysis(selectedAnalysisId);
+  const uploadMutation = useUploadAnalysis();
+
+  if (!user || user.role !== "l_and_d") {
+    return <Redirect to="/dashboard" />;
+  }
+
+  const handleFile = useCallback((file: File) => {
+    if (!file.name.endsWith(".csv")) {
+      toast({ title: "Invalid File", description: "Please upload a CSV file.", variant: "destructive" });
+      return;
     }
+    uploadMutation.mutate(file, {
+      onSuccess: (data) => {
+        setSelectedAnalysisId(data.id);
+        toast({ title: "Upload Started", description: "Your CSV is being analyzed by AI." });
+      },
+      onError: (err) => {
+        toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
+      },
+    });
+  }, [uploadMutation, toast]);
 
-    const handleUpload = () => {
-        setIsUploading(true);
-        // Simulate upload and processing time
-        setTimeout(() => {
-            setIsUploading(false);
-            setHasData(true);
-            toast({
-                title: "Analysis Complete",
-                description: "Successfully processed 142 employee records and performance reviews."
-            });
-        }, 2500);
-    };
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }, [handleFile]);
 
-    const handleApprove = (index: number) => {
-        const newRecs = [...recommendations];
-        newRecs[index].status = "approved";
-        setRecommendations(newRecs);
-        toast({ title: "Training Plan Approved", description: `Course generator tasked with creating path for ${newRecs[index].target}.` });
-    };
+  const toggleRow = (id: number) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
-    return (
-        <div className="space-y-8">
-            <div>
-                <h1 className="text-3xl font-display font-bold text-foreground">Workforce Analysis & Planning</h1>
-                <p className="text-muted-foreground mt-2">Identify skill gaps and generate intelligent training recommendations.</p>
-            </div>
+  const isProcessing = analysisDetail?.status === "processing";
+  const isCompleted = analysisDetail?.status === "completed";
+  const isFailed = analysisDetail?.status === "failed";
 
-            {!hasData ? (
-                <Card className="border-2 border-dashed border-border/50 bg-muted/10">
-                    <CardContent className="flex flex-col items-center justify-center py-24 text-center">
-                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-                            <UploadCloud className="w-10 h-10 text-primary" />
-                        </div>
-                        <h3 className="text-2xl font-display font-bold mb-2">Upload Workforce Data</h3>
-                        <p className="text-muted-foreground max-w-md mx-auto mb-8">
-                            Import recent performance reviews, assessment scores, and manager feedback CSVs to analyze current skill levels across the organization.
-                        </p>
-                        <Button size="lg" onClick={handleUpload} disabled={isUploading} className="shadow-lg shadow-primary/20 h-12 px-8 text-base">
-                            {isUploading ? (
-                                <span className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded-full border-2 border-background border-t-transparent animate-spin" />
-                                    Analyzing Data...
-                                </span>
-                            ) : (
-                                "Select CSV Files to Analyze"
-                            )}
-                        </Button>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+  const skillsCount = analysisDetail?.results?.reduce(
+    (acc, r) => acc + (r.recommendedSkills as string[] || []).length, 0
+  ) ?? 0;
+  const matchedCoursesCount = analysisDetail?.results?.reduce(
+    (acc, r) => acc + (r.matchedCourseIds as number[] || []).length, 0
+  ) ?? 0;
 
-                    {/* Main Analysis Column */}
-                    <div className="lg:col-span-8 space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Card className="bg-primary text-primary-foreground border-none shadow-lg">
-                                <CardContent className="pt-6">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <p className="text-primary-foreground/80 font-medium mb-1">Critical Gaps</p>
-                                            <h4 className="text-4xl font-display font-bold">4</h4>
-                                        </div>
-                                        <AlertTriangle className="w-6 h-6 text-primary-foreground/50" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card className="shadow-sm border-border/50">
-                                <CardContent className="pt-6">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <p className="text-muted-foreground font-medium mb-1">Avg Organization Score</p>
-                                            <h4 className="text-3xl font-display font-bold">68%</h4>
-                                        </div>
-                                        <TrendingUp className="w-6 h-6 text-muted-foreground/30" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card className="shadow-sm border-border/50">
-                                <CardContent className="pt-6">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <p className="text-muted-foreground font-medium mb-1">Employees Analyzed</p>
-                                            <h4 className="text-3xl font-display font-bold">142</h4>
-                                        </div>
-                                        <Users className="w-6 h-6 text-muted-foreground/30" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-display font-bold text-foreground">Workforce Analysis</h1>
+        <p className="text-muted-foreground mt-2">
+          Upload employee data with manager remarks for AI-powered training recommendations.
+        </p>
+      </div>
 
-                        <Card className="border-border/50 shadow-md rounded-xl overflow-hidden">
-                            <CardHeader className="bg-muted/30 border-b border-border/50 pb-4">
-                                <CardTitle className="font-display">Department Skill Gaps</CardTitle>
-                                <CardDescription>Metrics based on recent performance and competency evaluations.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-0">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-[200px]">Department</TableHead>
-                                            <TableHead>Identified Skill Deficit</TableHead>
-                                            <TableHead>Current vs Target</TableHead>
-                                            <TableHead className="text-right">Impact</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {MOCK_SKILL_GAPS.map((gap, i) => (
-                                            <TableRow key={i} className="hover:bg-muted/10">
-                                                <TableCell className="font-medium">{gap.department}</TableCell>
-                                                <TableCell>{gap.skill}</TableCell>
-                                                <TableCell>
-                                                    <div className="space-y-1.5 w-[200px]">
-                                                        <div className="flex justify-between text-xs">
-                                                            <span className="text-muted-foreground">{gap.currentLevel}%</span>
-                                                            <span className="font-medium text-primary">Goal: {gap.targetLevel}%</span>
-                                                        </div>
-                                                        <Progress value={gap.currentLevel} className="h-2 bg-muted/50" />
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <Badge variant="secondary" className="font-normal">{gap.usersAffected} employees</Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Main content */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Upload area */}
+          <Card
+            className={`border-2 border-dashed transition-colors ${
+              isDragging
+                ? "border-primary bg-primary/5"
+                : "border-border/50 bg-muted/10"
+            }`}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+          >
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                <UploadCloud className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-display font-bold mb-1">Upload CSV File</h3>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
+                Drag and drop a CSV with employee data and manager remarks,
+                or click to browse. The AI will auto-detect column mappings.
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFile(file);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadMutation.isPending}
+                className="shadow-lg shadow-primary/20"
+              >
+                {uploadMutation.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading...
+                  </span>
+                ) : (
+                  "Select CSV File"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
 
-                    {/* Recommendations Column */}
-                    <div className="lg:col-span-4 space-y-6">
-                        <h3 className="text-xl font-display font-bold flex items-center gap-2">
-                            <Target className="w-5 h-5 text-primary" />
-                            AI Recommendations
-                        </h3>
-
-                        <div className="space-y-4">
-                            {recommendations.map((rec, i) => (
-                                <Card key={i} className={`border border-border/50 shadow-sm transition-all ${rec.status === 'approved' ? 'bg-muted/30 opacity-70' : 'hover:shadow-md hover:border-primary/30'}`}>
-                                    <CardContent className="p-5 flex flex-col gap-4">
-                                        <div className="flex justify-between items-start">
-                                            <Badge className={rec.status === 'approved' ? 'bg-green-500/20 text-green-700 hover:bg-green-500/20' : 'bg-primary/20 text-primary hover:bg-primary/20'}>
-                                                {rec.match}% Match
-                                            </Badge>
-                                            {rec.status === 'approved' && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                                        </div>
-
-                                        <div>
-                                            <h4 className="font-semibold text-foreground leading-tight mb-1">{rec.title}</h4>
-                                            <p className="text-sm text-muted-foreground">Target: {rec.target}</p>
-                                        </div>
-
-                                        {rec.status === 'pending' ? (
-                                            <Button onClick={() => handleApprove(i)} className="w-full mt-2 shadow-sm" variant="outline">
-                                                Approve & Generate
-                                            </Button>
-                                        ) : (
-                                            <Button variant="ghost" className="w-full mt-2 text-primary text-sm hover:bg-primary/5" size="sm">
-                                                View in Builder <ArrowRight className="w-4 h-4 ml-1" />
-                                            </Button>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    </div>
-
+          {/* Processing state */}
+          {selectedAnalysisId && isProcessing && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="flex items-center gap-4 py-6">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                <div>
+                  <h4 className="font-semibold">Analyzing employee data...</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Mistral AI is processing {analysisDetail?.totalEmployees ?? "..."} employee records.
+                    This may take a minute.
+                  </p>
                 </div>
-            )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Failed state */}
+          {selectedAnalysisId && isFailed && (
+            <Card className="border-destructive/30 bg-destructive/5">
+              <CardContent className="flex items-center gap-4 py-6">
+                <AlertCircle className="w-8 h-8 text-destructive" />
+                <div>
+                  <h4 className="font-semibold text-destructive">Analysis Failed</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Could not process the CSV. Check that it contains employee names and manager remarks columns.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Results */}
+          {selectedAnalysisId && isCompleted && analysisDetail && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {/* Summary cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-primary text-primary-foreground border-none shadow-lg">
+                  <CardContent className="pt-6">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-primary-foreground/80 font-medium mb-1">Employees Analyzed</p>
+                        <h4 className="text-4xl font-display font-bold">{analysisDetail.totalEmployees}</h4>
+                      </div>
+                      <Users className="w-6 h-6 text-primary-foreground/50" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-sm border-border/50">
+                  <CardContent className="pt-6">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-muted-foreground font-medium mb-1">Skills Identified</p>
+                        <h4 className="text-3xl font-display font-bold">{skillsCount}</h4>
+                      </div>
+                      <Lightbulb className="w-6 h-6 text-muted-foreground/30" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-sm border-border/50">
+                  <CardContent className="pt-6">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-muted-foreground font-medium mb-1">Courses Matched</p>
+                        <h4 className="text-3xl font-display font-bold">{matchedCoursesCount}</h4>
+                      </div>
+                      <BookOpen className="w-6 h-6 text-muted-foreground/30" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Results table */}
+              <Card className="border-border/50 shadow-md rounded-xl overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-border/50 pb-4">
+                  <CardTitle className="font-display">Employee Analysis Results</CardTitle>
+                  <CardDescription>
+                    AI-powered training recommendations based on manager remarks.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[180px]">Employee</TableHead>
+                        <TableHead className="w-[120px]">Department</TableHead>
+                        <TableHead>AI Summary</TableHead>
+                        <TableHead className="w-[140px]">Recommendations</TableHead>
+                        <TableHead className="w-[40px]" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {analysisDetail.results?.map((r: AnalysisResult) => (
+                        <ResultRow
+                          key={r.id}
+                          result={r}
+                          expanded={expandedRows.has(r.id)}
+                          onToggle={() => toggleRow(r.id)}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
+
+        {/* History sidebar */}
+        <div className="lg:col-span-4 space-y-4">
+          <h3 className="text-lg font-display font-bold flex items-center gap-2">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            Past Analyses
+          </h3>
+
+          {isLoadingList && (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          )}
+
+          {analyses && analyses.length === 0 && (
+            <p className="text-sm text-muted-foreground">No analyses yet. Upload a CSV to get started.</p>
+          )}
+
+          <div className="space-y-2">
+            {analyses?.map((a) => (
+              <Card
+                key={a.id}
+                className={`cursor-pointer transition-all hover:shadow-md ${
+                  selectedAnalysisId === a.id ? "border-primary shadow-md" : "border-border/50"
+                }`}
+                onClick={() => setSelectedAnalysisId(a.id)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm font-medium truncate">{a.filename}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {a.totalEmployees} employees
+                        {a.createdAt && ` · ${new Date(a.createdAt).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                    <StatusBadge status={a.status} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === "completed") {
+    return (
+      <Badge className="bg-green-500/20 text-green-700 hover:bg-green-500/20 shrink-0">
+        <CheckCircle2 className="w-3 h-3 mr-1" />
+        Done
+      </Badge>
     );
+  }
+  if (status === "processing") {
+    return (
+      <Badge className="bg-blue-500/20 text-blue-700 hover:bg-blue-500/20 shrink-0">
+        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+        Processing
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="destructive" className="shrink-0">
+      <AlertCircle className="w-3 h-3 mr-1" />
+      Failed
+    </Badge>
+  );
+}
+
+function ResultRow({
+  result,
+  expanded,
+  onToggle,
+}: {
+  result: AnalysisResult;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const skills = (result.recommendedSkills as string[]) || [];
+  const matchedIds = (result.matchedCourseIds as number[]) || [];
+  const trainings = (result.suggestedTrainings as { title: string; description: string; reason: string }[]) || [];
+  const totalRecs = matchedIds.length + trainings.length;
+
+  return (
+    <>
+      <TableRow className="hover:bg-muted/10 cursor-pointer" onClick={onToggle}>
+        <TableCell className="font-medium">{result.employeeName}</TableCell>
+        <TableCell className="text-muted-foreground">{result.department || "—"}</TableCell>
+        <TableCell className="text-sm">{result.aiSummary || "—"}</TableCell>
+        <TableCell>
+          <Badge variant="secondary">{totalRecs} courses</Badge>
+        </TableCell>
+        <TableCell>
+          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </TableCell>
+      </TableRow>
+      {expanded && (
+        <TableRow>
+          <TableCell colSpan={5} className="bg-muted/20 p-4">
+            <div className="space-y-4">
+              {/* Manager Remarks */}
+              {result.managerRemarks && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Manager Remarks</p>
+                  <p className="text-sm">{result.managerRemarks}</p>
+                </div>
+              )}
+
+              {/* Skills */}
+              {skills.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Recommended Skills</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {skills.map((s, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">{s}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Matched Courses */}
+              {matchedIds.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Matched Existing Courses</p>
+                  <div className="flex flex-wrap gap-2">
+                    {matchedIds.map((id) => (
+                      <a
+                        key={id}
+                        href={`/courses/${id}`}
+                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Course #{id}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Suggested Trainings */}
+              {trainings.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Suggested New Trainings</p>
+                  <div className="space-y-2">
+                    {trainings.map((t, i) => (
+                      <div key={i} className="bg-background rounded-lg p-3 border border-border/50">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-medium text-sm">{t.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>
+                            <p className="text-xs text-primary mt-1">Reason: {t.reason}</p>
+                          </div>
+                          <a
+                            href={`/generator?title=${encodeURIComponent(t.title)}&description=${encodeURIComponent(t.description)}`}
+                            className="shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Course
+                            </Button>
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
 }

@@ -1,0 +1,11 @@
+Employee Name,Department,Role,Manager Remarks
+Sarah Johnson,Engineering,Senior Developer,"Sarah has shown strong backend skills but struggles with cloud infrastructure. She needs more exposure to AWS services, especially Lambda and ECS. Would benefit from a cloud architecture course."
+Michael Chen,Sales,Account Executive,"Michael consistently exceeds quota but has difficulty handling complex objections from enterprise clients. His presentation skills could also use improvement for C-suite meetings."
+Priya Patel,Design,UX Designer,"Priya creates beautiful interfaces but often overlooks accessibility standards. She should focus on WCAG compliance and inclusive design principles. Also needs to improve her prototyping speed in Figma."
+James Wilson,Marketing,Content Strategist,"James writes excellent copy but lacks data analytics skills. He needs training in Google Analytics, A/B testing methodologies, and basic SQL to better measure campaign performance."
+Emily Rodriguez,Engineering,Frontend Developer,"Emily is great with React but needs to learn TypeScript more deeply. Her code reviews show gaps in testing practices — she should take a unit testing and TDD course."
+David Kim,Customer Support,Team Lead,"David has strong empathy and communication skills. However, he needs leadership training to better manage his growing team. Conflict resolution and performance management are key areas."
+Aisha Mohammed,Engineering,DevOps Engineer,"Aisha is excellent at CI/CD pipelines but needs to deepen her Kubernetes knowledge. Security best practices and container orchestration at scale should be her focus areas."
+Tom Bradley,Sales,Sales Manager,"Tom manages his team well but needs to adopt modern CRM tools more effectively. Data-driven sales forecasting and pipeline analytics training would be very beneficial."
+Lisa Chang,Design,Product Designer,"Lisa has strong visual design skills but needs improvement in user research methodologies. She should learn more about conducting usability studies and synthesizing qualitative data."
+Robert Garcia,Marketing,SEO Specialist,"Robert is technically proficient in SEO but lacks understanding of content strategy and brand voice. Cross-functional collaboration with the content team needs improvement."

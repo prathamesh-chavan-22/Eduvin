@@ -8,7 +8,9 @@ import {
   courses,
   courseModules,
   enrollments,
-  notifications
+  notifications,
+  workflowAnalyses,
+  analysisResults,
 } from "./schema";
 
 export const errorSchemas = {
@@ -148,7 +150,32 @@ export const api = {
         404: errorSchemas.notFound,
       },
     }
-  }
+  },
+  analysis: {
+    upload: {
+      method: "POST" as const,
+      path: "/api/analysis/upload" as const,
+      responses: {
+        201: z.custom<typeof workflowAnalyses.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    list: {
+      method: "GET" as const,
+      path: "/api/analysis" as const,
+      responses: {
+        200: z.array(z.custom<typeof workflowAnalyses.$inferSelect>()),
+      },
+    },
+    get: {
+      method: "GET" as const,
+      path: "/api/analysis/:id" as const,
+      responses: {
+        200: z.custom<typeof workflowAnalyses.$inferSelect & { results: (typeof analysisResults.$inferSelect)[] }>(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {

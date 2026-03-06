@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from sqlalchemy import Integer, Text, Boolean, DateTime, Float, ARRAY, ForeignKey, func
+from sqlalchemy import Integer, Text, Boolean, DateTime, Float, ARRAY, ForeignKey, func, JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -80,6 +80,34 @@ class SpeakingPractice(Base):
     fluency_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     corrections: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
+
+
+class WorkflowAnalysis(Base):
+    __tablename__ = "workflow_analyses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_by: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"))
+    filename: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="processing")
+    column_mapping: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    total_employees: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class AnalysisResult(Base):
+    __tablename__ = "analysis_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    analysis_id: Mapped[int] = mapped_column(Integer, ForeignKey("workflow_analyses.id"), nullable=False)
+    employee_name: Mapped[str] = mapped_column(Text, nullable=False)
+    department: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    manager_remarks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ai_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    recommended_skills: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    matched_course_ids: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    suggested_trainings: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
 
 

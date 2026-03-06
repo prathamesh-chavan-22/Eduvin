@@ -12,7 +12,7 @@ from database import async_session_factory
 from session import create_session_table
 from seed import seed_database
 
-from routers import auth, users, courses, enrollments, notifications, speaking
+from routers import auth, users, courses, enrollments, notifications, speaking, analysis
 
 
 @asynccontextmanager
@@ -56,6 +56,7 @@ app.include_router(courses.router)
 app.include_router(enrollments.router)
 app.include_router(notifications.router)
 app.include_router(speaking.router)
+app.include_router(analysis.router)
 
 # Production: serve static files
 dist_dir = os.path.join(os.path.dirname(__file__), "..", "dist", "public")

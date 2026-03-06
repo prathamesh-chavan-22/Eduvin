@@ -161,3 +161,40 @@ class ErrorResponse(BaseModel):
 
 class MessageResponse(CamelModel):
     message: str
+
+
+# --- Analysis models ---
+
+
+class SuggestedTraining(CamelModel):
+    title: str
+    description: str
+    reason: str
+
+
+class AnalysisResultOut(CamelModel):
+    id: int
+    analysis_id: int
+    employee_name: str
+    department: Optional[str] = None
+    manager_remarks: Optional[str] = None
+    ai_summary: Optional[str] = None
+    recommended_skills: Optional[List[str]] = None
+    matched_course_ids: Optional[List[int]] = None
+    suggested_trainings: Optional[List[SuggestedTraining]] = None
+    created_at: Optional[datetime] = None
+
+
+class AnalysisOut(CamelModel):
+    id: int
+    created_by: Optional[int] = None
+    filename: str
+    status: str
+    column_mapping: Optional[dict] = None
+    total_employees: int
+    created_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
+class AnalysisDetailOut(AnalysisOut):
+    results: Optional[List[AnalysisResultOut]] = None
