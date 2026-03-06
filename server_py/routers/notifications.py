@@ -16,7 +16,7 @@ async def list_notifications(user_id: int = Depends(require_auth), db: AsyncSess
 
 
 @router.patch("/{notification_id}/read")
-async def mark_read(notification_id: int, db: AsyncSession = Depends(get_db)):
+async def mark_read(notification_id: int, user_id: int = Depends(require_auth), db: AsyncSession = Depends(get_db)):
     notification = await storage.mark_notification_read(db, notification_id)
     if notification is None:
         return Response(

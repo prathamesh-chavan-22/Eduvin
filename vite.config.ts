@@ -42,5 +42,8 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    hmr: {
+      path: "/vite-hmr",
+    },
   },
 });
