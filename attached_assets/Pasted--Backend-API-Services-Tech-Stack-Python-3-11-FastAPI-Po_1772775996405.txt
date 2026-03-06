@@ -1,0 +1,363 @@
+# Backend API Services
+
+> **Tech Stack:** Python 3.11+ · FastAPI · PostgreSQL · SQLAlchemy (async) · Celery + Redis · LangChain · pgvector
+
+---
+
+## 1. Authentication Service
+
+| | |
+|---|---|
+| **Screen** | Login & Role Access |
+| **Method** | POST |
+| **Endpoint** | `/api/v1/auth/login` |
+| **Description** | Validates credentials (email/password or SSO token), issues JWT access & refresh tokens, returns user role for client-side redirection. |
+| **Tech** | FastAPI + OAuth2PasswordBearer, python-jose for JWT, passlib[bcrypt] for hashing |
+
+---
+
+## 2. Forgot Password
+
+| | |
+|---|---|
+| **Screen** | Login & Role Access |
+| **Method** | POST |
+| **Endpoint** | `/api/v1/auth/forgot-password` |
+| **Description** | Generates a time-limited reset token, sends password reset email link. |
+| **Tech** | FastAPI BackgroundTasks, itsdangerous for token signing, SMTP via aiosmtplib |
+
+---
+
+## 3. Password Reset
+
+| | |
+|---|---|
+| **Screen** | Login & Role Access |
+| **Method** | POST |
+| **Endpoint** | `/api/v1/auth/reset-password` |
+| **Description** | Validates reset token and updates the user password hash in the database. |
+| **Tech** | passlib[bcrypt], SQLAlchemy ORM update |
+
+---
+
+## 4. User Profile Service
+
+| | |
+|---|---|
+| **Screen** | Profile & Settings |
+| **Method** | GET / PUT |
+| **Endpoint** | `/api/v1/users/me` |
+| **Description** | Returns or updates the authenticated user's profile details, notification preferences, language settings, and role-specific personalization. |
+| **Tech** | Pydantic response/request models, SQLAlchemy async session |
+
+---
+
+## 5. Dashboard Aggregation Service
+
+| | |
+|---|---|
+| **Screen** | Unified Dashboard |
+| **Method** | GET |
+| **Endpoint** | `/api/v1/dashboard` |
+| **Description** | Returns role-aware dashboard payload. L&D: pending analyses, approvals, generation jobs. Employee: assigned courses, progress, next actions. Manager: team progress, weak skills, overdue learners. |
+| **Tech** | Role-based dependency injection, async aggregation queries with SQLAlchemy |
+
+---
+
+## 6. Notification Service
+
+| | |
+|---|---|
+| **Screen** | Unified Dashboard, Notification & Agent Activity |
+| **Method** | GET / POST |
+| **Endpoint** | `/api/v1/notifications` |
+| **Description** | Lists user notifications (paginated) and creates system event notifications (skill-gap done, approval requested, course generated, adaptive change, exam completed, at-risk alerts). |
+| **Tech** | FastAPI WebSocket for real-time push, PostgreSQL LISTEN/NOTIFY, background task fan-out |
+
+---
+
+## 7. Employee Data Upload Service
+
+| | |
+|---|---|
+| **Screen** | Workforce Analysis & Training Planning |
+| **Method** | POST |
+| **Endpoint** | `/api/v1/workforce/upload` |
+| **Description** | Accepts CSV/Excel files with employee data, assessment scores, performance reviews, and manager feedback. Validates, parses, and stores records for downstream analysis. |
+| **Tech** | python-multipart, pandas for parsing, async bulk insert via SQLAlchemy |
+
+---
+
+## 8. Skill Gap Analysis Service
+
+| | |
+|---|---|
+| **Screen** | Workforce Analysis & Training Planning |
+| **Method** | POST / GET |
+| **Endpoint** | `/api/v1/workforce/skill-gap` |
+| **Description** | Triggers AI-driven analysis of uploaded workforce data at org/team/employee level. Returns identified skill gaps and severity scores. |
+| **Tech** | Celery + Redis task queue for long-running analysis, OpenAI / LangChain integration |
+
+---
+
+## 9. Training Recommendation Service
+
+| | |
+|---|---|
+| **Screen** | Workforce Analysis & Training Planning |
+| **Method** | GET / PUT |
+| **Endpoint** | `/api/v1/workforce/recommendations` |
+| **Description** | Generates AI-suggested training plans based on skill gap results. L&D can approve, edit, or reject each recommendation. |
+| **Tech** | LangChain RAG pipeline, Pydantic enums for approval status, SQLAlchemy state machine |
+
+---
+
+## 10. Document Ingestion Service
+
+| | |
+|---|---|
+| **Screen** | Course Builder & Generation |
+| **Method** | POST |
+| **Endpoint** | `/api/v1/courses/documents/upload` |
+| **Description** | Uploads PDFs, PPTs, transcripts, and internal docs. Extracts text, chunks content, and stores vector embeddings for AI course generation. |
+| **Tech** | python-multipart, PyMuPDF / python-pptx, LangChain text splitters, pgvector for embeddings |
+
+---
+
+## 11. AI Course Generation Service
+
+| | |
+|---|---|
+| **Screen** | Course Builder & Generation |
+| **Method** | POST |
+| **Endpoint** | `/api/v1/courses/generate` |
+| **Description** | Accepts audience level and depth config. AI generates course modules, learning objectives, quizzes, and lesson flow from ingested documents. Returns structured course JSON for review. |
+| **Tech** | Celery async task, LangChain + OpenAI, structured output with Pydantic models |
+
+---
+
+## 12. Course CRUD Service
+
+| | |
+|---|---|
+| **Screen** | Course Builder & Generation |
+| **Method** | CRUD |
+| **Endpoint** | `/api/v1/courses/{course_id}` |
+| **Description** | Full CRUD for courses. L&D can review, edit, regenerate sections, approve, and manage course versions. |
+| **Tech** | FastAPI APIRouter, SQLAlchemy ORM with versioning, soft-delete support |
+
+---
+
+## 13. SCORM Export Service
+
+| | |
+|---|---|
+| **Screen** | Course Builder & Generation |
+| **Method** | POST |
+| **Endpoint** | `/api/v1/courses/{course_id}/export` |
+| **Description** | Packages approved course content into SCORM-compliant zip for LMS integration and external publishing. |
+| **Tech** | python-scorm / custom SCORM packager, FastAPI StreamingResponse for zip download |
+
+---
+
+## 14. Course Assignment Service
+
+| | |
+|---|---|
+| **Screen** | Assignment & Learning Control |
+| **Method** | POST / GET |
+| **Endpoint** | `/api/v1/assignments` |
+| **Description** | Assigns courses to employees by individual, role, department, or team. Sets deadlines, priority levels, and tracks assignment status. |
+| **Tech** | SQLAlchemy bulk operations, Pydantic validators for deadline/priority rules |
+
+---
+
+## 15. Learner Monitoring Service
+
+| | |
+|---|---|
+| **Screen** | Assignment & Learning Control |
+| **Method** | GET |
+| **Endpoint** | `/api/v1/assignments/monitoring` |
+| **Description** | Returns real-time learner status across assignments. Identifies struggling employees, generates alerts when adaptive intervention thresholds are breached. |
+| **Tech** | Async SQLAlchemy queries with window functions, configurable threshold rules |
+
+---
+
+## 16. Learning Progress Service
+
+| | |
+|---|---|
+| **Screen** | Learning Experience |
+| **Method** | GET / PUT |
+| **Endpoint** | `/api/v1/learning/progress` |
+| **Description** | Tracks and updates employee progress through assigned courses — current lesson, completion %, quiz scores, time spent per module. |
+| **Tech** | SQLAlchemy upsert, Redis caching for active sessions |
+
+---
+
+## 17. Adaptive Learning Engine
+
+| | |
+|---|---|
+| **Screen** | Learning Experience |
+| **Method** | GET |
+| **Endpoint** | `/api/v1/learning/adaptive-path/{enrollment_id}` |
+| **Description** | AI-driven service that adjusts the learning path based on quiz performance — inserts remedial modules for weak areas or unlocks advanced content for high performers. |
+| **Tech** | Rule engine + LangChain, PostgreSQL JSONB for path state, event-driven recalculation |
+
+---
+
+## 18. Course Player Content Service
+
+| | |
+|---|---|
+| **Screen** | Learning Experience |
+| **Method** | GET |
+| **Endpoint** | `/api/v1/learning/content/{module_id}` |
+| **Description** | Serves lesson materials (text, media URLs, embedded content) for the course player. Supports pagination and bookmarking. |
+| **Tech** | FastAPI with streaming support, S3/MinIO presigned URLs for media |
+
+---
+
+## 19. Question Bank Generator Service
+
+| | |
+|---|---|
+| **Screen** | Assessment & Question Bank |
+| **Method** | POST |
+| **Endpoint** | `/api/v1/assessments/question-bank/generate` |
+| **Description** | AI generates Bloom's Taxonomy-based questions with difficulty tags, distractors, and answer keys from course content. |
+| **Tech** | LangChain + OpenAI structured output, Bloom's level enum, Celery for batch generation |
+
+---
+
+## 20. Question Bank CRUD Service
+
+| | |
+|---|---|
+| **Screen** | Assessment & Question Bank |
+| **Method** | CRUD |
+| **Endpoint** | `/api/v1/assessments/question-bank` |
+| **Description** | Full CRUD for managing AI-generated and manually added questions. Supports filtering by topic, difficulty, and Bloom's level. |
+| **Tech** | SQLAlchemy with full-text search, Pydantic filter models |
+
+---
+
+## 21. Exam Creation Service
+
+| | |
+|---|---|
+| **Screen** | Assessment & Question Bank |
+| **Method** | POST / GET |
+| **Endpoint** | `/api/v1/assessments/exams` |
+| **Description** | L&D creates exams by selecting questions from the bank, setting time limits, passing criteria, and attempt rules. |
+| **Tech** | Pydantic exam config model, SQLAlchemy relationships to question bank |
+
+---
+
+## 22. Exam Attempt Service
+
+| | |
+|---|---|
+| **Screen** | Assessment & Question Bank |
+| **Method** | POST / PUT |
+| **Endpoint** | `/api/v1/assessments/exams/{exam_id}/attempt` |
+| **Description** | Manages employee exam sessions — start, submit answers, auto-save progress, enforce time limits, and calculate results with weak-topic feedback. |
+| **Tech** | Redis for session state & timer, async grading pipeline, PostgreSQL JSONB for responses |
+
+---
+
+## 23. Analytics & Reporting Service
+
+| | |
+|---|---|
+| **Screen** | Analytics & Intervention |
+| **Method** | GET |
+| **Endpoint** | `/api/v1/analytics/reports` |
+| **Description** | Aggregates completion rates, exam performance, skill improvement trends, and training effectiveness metrics. Supports filters by team, department, and time range. |
+| **Tech** | SQLAlchemy aggregate queries, materialized views in PostgreSQL, pandas for data shaping |
+
+---
+
+## 24. Adaptive Insights Service
+
+| | |
+|---|---|
+| **Screen** | Analytics & Intervention |
+| **Method** | GET |
+| **Endpoint** | `/api/v1/analytics/adaptive-insights` |
+| **Description** | Returns data on adaptive learning interventions triggered, their outcomes, team weak areas, and AI-recommended next actions for retraining or support. |
+| **Tech** | PostgreSQL CTEs and window functions, LangChain for recommendation generation |
+
+---
+
+## 25. Pronunciation Coach Service
+
+| | |
+|---|---|
+| **Screen** | Language Learning / Speaking Coach |
+| **Method** | POST |
+| **Endpoint** | `/api/v1/language/pronunciation/analyze` |
+| **Description** | Accepts audio recordings, performs speech-to-text transcription, phoneme-level pronunciation analysis, fluency scoring, and error detection. Returns detailed feedback. |
+| **Tech** | Whisper API / Azure Speech SDK, custom phoneme analyzer, FastAPI UploadFile |
+
+---
+
+## 26. Speaking Practice Service
+
+| | |
+|---|---|
+| **Screen** | Language Learning / Speaking Coach |
+| **Method** | GET / POST |
+| **Endpoint** | `/api/v1/language/speaking/sessions` |
+| **Description** | Manages speaking practice sessions — delivers prompts, records attempts, provides live transcript, and tracks improvement trends over time. |
+| **Tech** | WebSocket for live transcript streaming, S3/MinIO for audio storage, PostgreSQL time-series |
+
+---
+
+## 27. Language Progress Service
+
+| | |
+|---|---|
+| **Screen** | Language Learning / Speaking Coach |
+| **Method** | GET |
+| **Endpoint** | `/api/v1/language/progress` |
+| **Description** | Tracks overall language learning progress — pronunciation accuracy trends, fluency scores, error frequency reduction, and speaking confidence metrics. |
+| **Tech** | SQLAlchemy aggregate queries, time-series analysis with PostgreSQL |
+
+---
+
+## 28. Role & Permission Service
+
+| | |
+|---|---|
+| **Screen** | All Screens (middleware) |
+| **Method** | GET |
+| **Endpoint** | `/api/v1/admin/roles` |
+| **Description** | Manages role definitions (L&D, Employee, Manager, Admin) and granular permissions. Used as a FastAPI dependency for route-level access control. |
+| **Tech** | FastAPI Depends() injection, custom RBAC middleware, PostgreSQL role/permission tables |
+
+---
+
+## 29. File & Media Storage Service
+
+| | |
+|---|---|
+| **Screen** | Course Builder, Workforce Upload, Language Coach |
+| **Method** | POST / GET |
+| **Endpoint** | `/api/v1/files/{file_id}` |
+| **Description** | Handles secure file uploads, storage, retrieval, and presigned URL generation for all file-related operations across the platform. |
+| **Tech** | S3/MinIO integration via boto3, FastAPI UploadFile, virus scanning with ClamAV |
+
+---
+
+## 30. Background Job & Task Queue
+
+| | |
+|---|---|
+| **Screen** | All async operations |
+| **Method** | GET |
+| **Endpoint** | `/api/v1/jobs/{job_id}/status` |
+| **Description** | Manages and tracks long-running background tasks (AI generation, analysis, exports). Provides job status, progress percentage, and result retrieval. |
+| **Tech** | Celery + Redis broker, Flower for monitoring, PostgreSQL for job result persistence |
