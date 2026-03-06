@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,14 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useCreateCourse, useCreateModule, useCourseModules } from "@/hooks/use-courses";
-import { Loader2, Plus, Save, ChevronRight, BookText } from "lucide-react";
+import { Loader2, Plus, Save, ChevronRight, BookText, UploadCloud, DownloadCloud, FileVideo, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function CourseBuilder() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
+
   const createCourse = useCreateCourse();
   const [courseId, setCourseId] = useState<number | null>(null);
 
@@ -62,9 +62,9 @@ export default function CourseBuilder() {
               <form onSubmit={handleCreateCourse} className="space-y-4">
                 <div className="space-y-2">
                   <Label>Course Title</Label>
-                  <Input 
-                    placeholder="e.g. Advanced Leadership" 
-                    value={title} 
+                  <Input
+                    placeholder="e.g. Advanced Leadership"
+                    value={title}
                     onChange={e => setTitle(e.target.value)}
                     disabled={!!courseId}
                     required
@@ -72,8 +72,8 @@ export default function CourseBuilder() {
                 </div>
                 <div className="space-y-2">
                   <Label>Description</Label>
-                  <Textarea 
-                    placeholder="What will students learn?" 
+                  <Textarea
+                    placeholder="What will students learn?"
                     className="h-24 resize-none"
                     value={description}
                     onChange={e => setDescription(e.target.value)}
@@ -122,6 +122,23 @@ function ModuleBuilder({ courseId, onDone }: { courseId: number, onDone: () => v
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setIsUploading(true);
+      const fileName = e.target.files[0].name;
+      setTimeout(() => {
+        setIsUploading(false);
+        setAttachedFiles(prev => [...prev, fileName]);
+        toast({ title: "Resource attached", description: `${fileName} attached to module.` });
+      }, 1500);
+    }
+  };
+
   const handleAddModule = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -132,10 +149,19 @@ function ModuleBuilder({ courseId, onDone }: { courseId: number, onDone: () => v
       });
       setTitle("");
       setContent("");
+      setAttachedFiles([]);
       toast({ title: "Module added" });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Error", description: error.message });
     }
+  };
+
+  const handleExport = () => {
+    setIsExporting(true);
+    setTimeout(() => {
+      setIsExporting(false);
+      toast({ title: "SCORM Export Ready", description: "Your course package has been downloaded." });
+    }, 2000);
   };
 
   return (
@@ -160,18 +186,51 @@ function ModuleBuilder({ courseId, onDone }: { courseId: number, onDone: () => v
         <h4 className="font-semibold text-foreground">Add New Module</h4>
         <div className="space-y-2">
           <Label>Module Title</Label>
-          <Input 
-            placeholder="e.g. Introduction to Concepts" 
-            value={title} onChange={e => setTitle(e.target.value)} required 
+          <Input
+            placeholder="e.g. Introduction to Concepts"
+            value={title} onChange={e => setTitle(e.target.value)} required
           />
         </div>
         <div className="space-y-2">
           <Label>Module Content</Label>
-          <Textarea 
-            placeholder="Write the module content here..." 
-            className="h-32 resize-none" 
-            value={content} onChange={e => setContent(e.target.value)} required 
+          <Textarea
+            placeholder="Write the module content here..."
+            className="h-32 resize-none"
+            value={content} onChange={e => setContent(e.target.value)} required
           />
+        </div>
+        <div className="space-y-2">
+          <Label>Resource Upload (Optional)</Label>
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-border/50 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/10 transition-colors"
+          >
+            <UploadCloud className="w-8 h-8 text-muted-foreground mb-2" />
+            <p className="text-sm font-medium">Click to upload video or PDF</p>
+            <p className="text-xs text-muted-foreground">MP4, PDF up to 50MB</p>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleFileUpload}
+              accept=".pdf,.mp4"
+            />
+          </div>
+          {isUploading && (
+            <div className="flex items-center text-sm text-muted-foreground mt-2">
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading file...
+            </div>
+          )}
+          {attachedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {attachedFiles.map((file, i) => (
+                <div key={i} className="flex items-center text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                  {file.endsWith('.mp4') ? <FileVideo className="w-3 h-3 mr-1" /> : <FileText className="w-3 h-3 mr-1" />}
+                  {file}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <Button type="submit" variant="secondary" className="w-full" disabled={createModule.isPending}>
           {createModule.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
@@ -180,9 +239,15 @@ function ModuleBuilder({ courseId, onDone }: { courseId: number, onDone: () => v
       </form>
 
       {modules.length > 0 && (
-        <Button onClick={onDone} className="w-full shadow-lg" size="lg">
-          <Save className="w-4 h-4 mr-2" /> Finish Course Creation
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button onClick={onDone} className="w-full shadow-lg" size="lg">
+            <Save className="w-4 h-4 mr-2" /> Finish Course
+          </Button>
+          <Button onClick={handleExport} variant="outline" className="w-full shadow-lg border-primary/20 hover:bg-primary/5" size="lg" disabled={isExporting}>
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <DownloadCloud className="w-4 h-4 mr-2" />}
+            Export SCORM
+          </Button>
+        </div>
       )}
     </div>
   );

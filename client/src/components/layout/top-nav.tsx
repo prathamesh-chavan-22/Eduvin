@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Bell, LogOut, Search, User as UserIcon } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
@@ -29,9 +30,9 @@ export function TopNav() {
         <SidebarTrigger />
         <div className="hidden md:flex relative max-w-md w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search courses, users..." 
-            className="pl-9 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary/30 rounded-full h-10 w-[300px]" 
+          <Input
+            placeholder="Search courses, users..."
+            className="pl-9 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary/30 rounded-full h-10 w-[300px]"
           />
         </div>
       </div>
@@ -55,13 +56,15 @@ export function TopNav() {
             </div>
             <div className="max-h-[300px] overflow-y-auto">
               {notifications.length === 0 ? (
-                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  No notifications
-                </div>
+                <DropdownMenuItem className="w-full text-center p-0 justify-center" asChild>
+                  <Link href="/notifications" className="block w-full text-sm font-medium p-2 bg-muted/50 hover:bg-muted/80">
+                    See all notifications
+                  </Link>
+                </DropdownMenuItem>
               ) : (
                 notifications.map(n => (
-                  <div 
-                    key={n.id} 
+                  <div
+                    key={n.id}
                     className={`p-4 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`}
                     onClick={() => !n.isRead && markRead.mutate(n.id)}
                   >
@@ -93,9 +96,11 @@ export function TopNav() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer rounded-md">
-              <UserIcon className="mr-2 h-4 w-4" />
-              <span>Profile Settings</span>
+            <DropdownMenuItem className="cursor-pointer rounded-md p-0" asChild>
+              <Link href="/settings" className="w-full h-full px-2 py-1.5 flex items-center">
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Profile Settings</span>
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-destructive focus:text-destructive rounded-md">
               <LogOut className="mr-2 h-4 w-4" />

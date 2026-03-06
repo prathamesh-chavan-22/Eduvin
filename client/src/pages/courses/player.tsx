@@ -12,16 +12,18 @@ export default function CoursePlayer() {
   const { id } = useParams<{ id: string }>();
   const courseId = parseInt(id || "0", 10);
   const [, setLocation] = useLocation();
-  
+
   const { user } = useAuth();
   const { data: course, isLoading: courseLoading } = useCourse(courseId);
   const { data: modules = [], isLoading: modulesLoading } = useCourseModules(courseId);
-  
+
   const { data: enrollments = [] } = useEnrollments();
   const updateProgress = useUpdateProgress();
   const enroll = useCreateEnrollment();
-  
+
   const [activeModuleId, setActiveModuleId] = useState<number | null>(null);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [quizScore, setQuizScore] = useState<number | null>(null);
 
   // Find or auto-enroll
   const myEnrollment = enrollments.find(e => e.courseId === courseId && e.userId === user?.id);
@@ -49,7 +51,12 @@ export default function CoursePlayer() {
   const activeModule = modules.find(m => m.id === activeModuleId) || modules[0];
   const activeIndex = modules.findIndex(m => m.id === activeModuleId);
 
-  const handleMarkComplete = async () => {
+  const handleNextClick = async () => {
+    if (!showQuiz) {
+      setShowQuiz(true);
+      return;
+    }
+
     if (!myEnrollment) {
       // Auto enroll if not enrolled
       const newE = await enroll.mutateAsync({ courseId, userId: user!.id, status: "in_progress", progressPct: 0 });
@@ -62,14 +69,19 @@ export default function CoursePlayer() {
   const handleProgressUpdate = async (enrollmentId: number) => {
     const nextPct = Math.round(((activeIndex + 1) / modules.length) * 100);
     const newStatus = nextPct === 100 ? "completed" : "in_progress";
-    
+
     await updateProgress.mutateAsync({
       id: enrollmentId,
       data: { progressPct: nextPct, status: newStatus }
     });
 
     if (activeIndex < modules.length - 1) {
+      setShowQuiz(false);
+      setQuizScore(null);
       setActiveModuleId(modules[activeIndex + 1].id);
+    } else {
+      setShowQuiz(false);
+      setQuizScore(null);
     }
   };
 
@@ -101,16 +113,19 @@ export default function CoursePlayer() {
             {modules.map((m, i) => {
               const isActive = m.id === activeModuleId;
               const isPast = myEnrollment ? (myEnrollment.progressPct >= Math.round(((i + 1) / modules.length) * 100)) : false;
-              
+
               return (
                 <button
                   key={m.id}
-                  onClick={() => setActiveModuleId(m.id)}
-                  className={`w-full text-left p-3 rounded-lg flex items-start gap-3 transition-all ${
-                    isActive 
-                      ? 'bg-primary/10 text-primary border border-primary/20' 
+                  onClick={() => {
+                    setActiveModuleId(m.id);
+                    setShowQuiz(false);
+                    setQuizScore(null);
+                  }}
+                  className={`w-full text-left p-3 rounded-lg flex items-start gap-3 transition-all ${isActive
+                      ? 'bg-primary/10 text-primary border border-primary/20'
                       : 'hover:bg-muted text-foreground border border-transparent'
-                  }`}
+                    }`}
                 >
                   <div className={`mt-0.5 shrink-0 ${isPast ? 'text-green-500' : (isActive ? 'text-primary' : 'text-muted-foreground')}`}>
                     {isPast ? <CheckCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
@@ -130,27 +145,48 @@ export default function CoursePlayer() {
           <div className="max-w-3xl mx-auto">
             {activeModule ? (
               <div className="bg-card rounded-2xl shadow-xl border border-border/50 overflow-hidden">
-                <div className="p-8 lg:p-12">
-                  <h2 className="text-3xl font-display font-bold mb-6">{activeModule.title}</h2>
-                  <div className="prose prose-slate dark:prose-invert max-w-none text-foreground/90 mb-12 whitespace-pre-wrap leading-relaxed">
-                    {activeModule.content}
+                {showQuiz ? (
+                  <div className="p-8 lg:p-12 animate-in fade-in slide-in-from-bottom-4">
+                    <h2 className="text-2xl font-display font-bold mb-2 flex items-center gap-2">
+                      Knowledge Check
+                    </h2>
+                    <p className="text-muted-foreground mb-8">Test your understanding of: {activeModule.title}</p>
+                    <div className="space-y-4">
+                      <p className="font-medium text-lg">What is the primary key takeaway from this module?</p>
+                      <div className="space-y-3">
+                        {["It doesn't matter", "The concepts discussed here are foundational to mastery", "Skip to the next module", "None of the above"].map((opt, i) => (
+                          <div key={i} onClick={() => setQuizScore(i)} className={`p-4 border rounded-xl cursor-pointer transition-all ${quizScore === i ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50 border-border/50'}`}>
+                            {opt}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                
+                ) : (
+                  <div className="p-8 lg:p-12 animate-in fade-in">
+                    <h2 className="text-3xl font-display font-bold mb-6">{activeModule.title}</h2>
+                    <div className="prose prose-slate dark:prose-invert max-w-none text-foreground/90 mb-12 whitespace-pre-wrap leading-relaxed">
+                      {activeModule.content}
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-muted/30 border-t border-border/50 p-6 flex justify-between items-center">
                   <div className="text-sm text-muted-foreground font-medium">
                     Module {activeIndex + 1} of {modules.length}
                   </div>
-                  <Button 
-                    size="lg" 
+                  <Button
+                    size="lg"
                     className="shadow-lg hover:-translate-y-0.5 transition-transform"
-                    onClick={handleMarkComplete}
-                    disabled={updateProgress.isPending}
+                    onClick={handleNextClick}
+                    disabled={updateProgress.isPending || (showQuiz && quizScore === null)}
                   >
-                    {activeIndex === modules.length - 1 ? (
-                      <><CheckCircle className="w-5 h-5 mr-2" /> Finish Course</>
+                    {!showQuiz ? (
+                      <>Take Module Quiz <ChevronRight className="w-5 h-5 ml-2" /></>
+                    ) : activeIndex === modules.length - 1 ? (
+                      <><CheckCircle className="w-5 h-5 mr-2" /> Submit & Finish Course</>
                     ) : (
-                      <>Complete & Continue <ChevronRight className="w-5 h-5 ml-2" /></>
+                      <>Submit & Continue <ChevronRight className="w-5 h-5 ml-2" /></>
                     )}
                   </Button>
                 </div>

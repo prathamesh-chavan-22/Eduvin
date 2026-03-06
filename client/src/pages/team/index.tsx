@@ -4,15 +4,16 @@ import { useCourses } from "@/hooks/use-courses";
 import { useEnrollments, useCreateEnrollment } from "@/hooks/use-enrollments";
 import { useState } from "react";
 import { Redirect } from "wouter";
-import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
-import { 
+import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Loader2 } from "lucide-react";
@@ -79,8 +80,8 @@ export default function TeamManagement() {
             {team.map((employee) => {
               const empEnrollments = enrollments.filter(e => e.userId === employee.id);
               const inProgress = empEnrollments.filter(e => e.status !== "completed").length;
-              const avgProgress = empEnrollments.length 
-                ? Math.round(empEnrollments.reduce((acc, e) => acc + e.progressPct, 0) / empEnrollments.length) 
+              const avgProgress = empEnrollments.length
+                ? Math.round(empEnrollments.reduce((acc, e) => acc + e.progressPct, 0) / empEnrollments.length)
                 : 0;
 
               return (
@@ -138,7 +139,7 @@ export default function TeamManagement() {
             <div className="space-y-2">
               <Label>Select Course</Label>
               <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full h-11 bg-muted/30">
                   <SelectValue placeholder="Choose a published course..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -150,6 +151,27 @@ export default function TeamManagement() {
                   )}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select defaultValue="medium">
+                  <SelectTrigger className="w-full bg-muted/30">
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low (Optional)</SelectItem>
+                    <SelectItem value="medium">Medium (Standard)</SelectItem>
+                    <SelectItem value="high">High (Required Compliance)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Deadline (Optional)</Label>
+                <Input type="date" className="w-full bg-muted/30" />
+              </div>
             </div>
           </div>
           <DialogFooter>
