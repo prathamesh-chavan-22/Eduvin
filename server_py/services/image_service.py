@@ -73,7 +73,7 @@ async def _search_wikimedia(term: str, limit: int = 2) -> list[str]:
 
 
 def _generate_placeholder_svg_url(term: str) -> str:
-    """Generate a data URI SVG placeholder with the term text."""
+    """Generate a reliable placeholder image url using the term as a seed."""
     clean = re.sub(r'[^a-zA-Z0-9 ]', '', term)[:40]
     encoded = quote_plus(clean)
-    return f"https://placehold.co/800x400/2d3748/e2e8f0?text={encoded}&font=roboto"
+    return f"https://picsum.photos/seed/{encoded}/800/400"
