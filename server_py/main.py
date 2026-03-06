@@ -1,7 +1,8 @@
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -36,15 +37,16 @@ app.add_middleware(
 )
 
 
-# Custom exception handler to match Express error format: {"message": "..."}
-@app.exception_handler(422)
-async def validation_exception_handler(request: Request, exc):
+# Custom exception handlers to match Express error format: {"message": "..."}
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(status_code=400, content={"message": "Validation error"})
 
 
-@app.exception_handler(401)
-async def unauthorized_handler(request: Request, exc):
-    return JSONResponse(status_code=401, content={"message": "Not authenticated"})
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    message = exc.detail if isinstance(exc.detail, str) else "Error"
+    return JSONResponse(status_code=exc.status_code, content={"message": message})
 
 
 # Include routers
