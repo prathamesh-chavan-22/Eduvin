@@ -195,6 +195,18 @@ async def get_enrollment(db: AsyncSession, enrollment_id: int) -> dict | None:
 
 async def create_enrollment(db: AsyncSession, *, user_id: int, course_id: int,
                             status: str = "assigned", progress_pct: int = 0) -> Enrollment:
+    # Check if enrollment already exists
+    result = await db.execute(
+        select(Enrollment).where(
+            Enrollment.user_id == user_id,
+            Enrollment.course_id == course_id
+        )
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        # Return existing enrollment instead of creating a duplicate
+        return existing
+    
     enrollment = Enrollment(user_id=user_id, course_id=course_id, status=status,
                             progress_pct=progress_pct, started_at=datetime.utcnow())
     db.add(enrollment)

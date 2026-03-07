@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAnalyses, useAnalysis, useUploadAnalysis } from "@/hooks/use-analysis";
+import { useEnrollments } from "@/hooks/use-enrollments";
 import type { AnalysisResult } from "@shared/schema";
 
 export default function WorkforceAnalysis() {
@@ -329,6 +330,19 @@ function ResultRow({
 
   const [assigningCourseId, setAssigningCourseId] = useState<number | null>(null);
   const [assignedCourseIds, setAssignedCourseIds] = useState<Set<number>>(new Set());
+  
+  // Fetch all enrollments to check which courses are already assigned
+  const { data: enrollments = [] } = useEnrollments();
+  
+  // Update assigned courses based on existing enrollments
+  // Currently using userId: 1 (hardcoded in assignment logic)
+  useEffect(() => {
+    const userId = 1; // This matches the hardcoded userId in handleAssignCourse
+    const alreadyAssigned = enrollments
+      .filter(e => e.userId === userId && matchedIds.includes(e.courseId))
+      .map(e => e.courseId);
+    setAssignedCourseIds(new Set(alreadyAssigned));
+  }, [enrollments, matchedIds]);
 
   const handleAssignCourse = async (courseId: number) => {
     setAssigningCourseId(courseId);

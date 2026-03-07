@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from sqlalchemy import Integer, Text, Boolean, DateTime, Float, ARRAY, ForeignKey, func, JSON
+from sqlalchemy import Integer, Text, Boolean, DateTime, Float, ARRAY, ForeignKey, func, JSON, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -65,6 +65,9 @@ class CourseConceptGraph(Base):
 
 class Enrollment(Base):
     __tablename__ = "enrollments"
+    __table_args__ = (
+        UniqueConstraint('user_id', 'course_id', name='uix_user_course'),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"))

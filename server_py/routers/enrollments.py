@@ -49,6 +49,22 @@ async def list_enrollments(userId: Optional[int] = None, db: AsyncSession = Depe
 
 @router.post("", status_code=201)
 async def create_enrollment(body: CreateEnrollment, db: AsyncSession = Depends(get_db)):
+    # Check if enrollment already exists
+    from sqlalchemy import select
+    from models import Enrollment
+    
+    result = await db.execute(
+        select(Enrollment).where(
+            Enrollment.user_id == body.user_id,
+            Enrollment.course_id == body.course_id
+        )
+    )
+    existing = result.scalar_one_or_none()
+    
+    if existing:
+        # Return existing enrollment without creating duplicate or sending notification
+        return EnrollmentOut.model_validate(existing).model_dump(by_alias=True)
+    
     enrollment = await storage.create_enrollment(
         db, user_id=body.user_id, course_id=body.course_id,
         status=body.status, progress_pct=body.progress_pct,

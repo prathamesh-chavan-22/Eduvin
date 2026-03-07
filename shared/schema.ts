@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, json, unique } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -46,7 +46,10 @@ export const enrollments = pgTable("enrollments", {
   progressPct: integer("progress_pct").notNull().default(0),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
-});
+}, (table) => ({
+  // Unique constraint to prevent duplicate enrollments
+  userCourseUnique: unique("uix_user_course").on(table.userId, table.courseId),
+}));
 
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
