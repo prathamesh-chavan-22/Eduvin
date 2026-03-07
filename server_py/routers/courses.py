@@ -8,10 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db, async_session_factory
 from schemas import (
     CourseListOut, CourseDetailOut, CourseOut, CourseModuleOut,
-    CreateCourse, CreateModule, GenerateCourseInput, ErrorResponse,
+    CreateCourse, CreateModule, GenerateCourseInput, ErrorResponse, CourseConceptGraphOut,
 )
 import storage
-from services.mistral_ai import generate_course_outline, generate_chapter_content
+from services.mistral_ai import generate_course_outline, generate_chapter_content, generate_course_concept_graph
 from services.edge_tts_service import generate_audio
 
 logger = logging.getLogger(__name__)
@@ -107,6 +107,33 @@ async def _generate_course_pipeline(course_id: int, title: str, audience: str, d
 
             # Step 4: Mark completed
             await storage.update_course_generation_status(
+                db, course_id, "generating_graph",
+                json.dumps({"step": "Building concept graph...", "pct": 95}),
+            )
+
+            fresh_course = await storage.get_course(db, course_id)
+            if fresh_course is not None:
+                course_entity = fresh_course["course"]
+                modules_for_graph = [
+                    {"title": m.title, "content": m.content}
+                    for m in fresh_course["modules"]
+                ]
+                concept_graph = await generate_course_concept_graph(
+                    course_title=course_entity.title,
+                    course_description=course_entity.description,
+                    modules=modules_for_graph,
+                )
+                await storage.upsert_course_concept_graph(
+                    db,
+                    course_id=course_id,
+                    mermaid=concept_graph["mermaid"],
+                    status=concept_graph.get("status", "ready"),
+                    nodes=concept_graph.get("nodes", []),
+                    edges=concept_graph.get("edges", []),
+                )
+
+            # Step 5: Mark completed
+            await storage.update_course_generation_status(
                 db, course_id, "completed",
                 json.dumps({"step": "Course generation complete!", "pct": 100}),
             )
@@ -117,6 +144,60 @@ async def _generate_course_pipeline(course_id: int, title: str, audience: str, d
                 await storage.update_course_generation_status(
                     err_db, course_id, "failed",
                     json.dumps({"step": "Generation failed. Please try again.", "pct": 0}),
+                )
+
+
+async def _regenerate_concept_graph_pipeline(course_id: int):
+    """Regenerate a detailed concept graph for an existing course in background."""
+    async with async_session_factory() as db:
+        try:
+            course_data = await storage.get_course(db, course_id)
+            if course_data is None:
+                return
+
+            existing = await storage.get_course_concept_graph(db, course_id)
+            current_mermaid = existing.mermaid if existing is not None else ""
+
+            await storage.upsert_course_concept_graph(
+                db,
+                course_id=course_id,
+                mermaid=current_mermaid,
+                status="generating",
+                nodes=[],
+                edges=[],
+            )
+
+            course_entity = course_data["course"]
+            modules_for_graph = [
+                {"title": m.title, "content": m.content}
+                for m in course_data["modules"]
+            ]
+            concept_graph = await generate_course_concept_graph(
+                course_title=course_entity.title,
+                course_description=course_entity.description,
+                modules=modules_for_graph,
+            )
+
+            await storage.upsert_course_concept_graph(
+                db,
+                course_id=course_id,
+                mermaid=concept_graph["mermaid"],
+                status=concept_graph.get("status", "ready"),
+                nodes=concept_graph.get("nodes", []),
+                edges=concept_graph.get("edges", []),
+            )
+        except Exception:
+            logger.exception("Concept graph regeneration failed for course_id=%s", course_id)
+            async with async_session_factory() as err_db:
+                existing = await storage.get_course_concept_graph(err_db, course_id)
+                current_mermaid = existing.mermaid if existing is not None else ""
+                await storage.upsert_course_concept_graph(
+                    err_db,
+                    course_id=course_id,
+                    mermaid=current_mermaid,
+                    status="failed",
+                    nodes=[],
+                    edges=[],
                 )
 
 
@@ -222,6 +303,51 @@ async def get_course(course_id: int, db: AsyncSession = Depends(get_db)):
 async def list_modules(course_id: int, db: AsyncSession = Depends(get_db)):
     modules = await storage.get_course_modules(db, course_id)
     return [CourseModuleOut.model_validate(m).model_dump(by_alias=True) for m in modules]
+
+
+@router.get("/{course_id}/concept-graph")
+async def get_concept_graph(course_id: int, db: AsyncSession = Depends(get_db)):
+    course_data = await storage.get_course(db, course_id)
+    if course_data is None:
+        return Response(
+            content=ErrorResponse(message="Course not found").model_dump_json(by_alias=True),
+            status_code=404,
+            media_type="application/json",
+        )
+
+    graph = await storage.get_course_concept_graph(db, course_id)
+    if graph is None:
+        course = course_data["course"]
+        status = "generating" if (course.generation_status and course.generation_status != "failed") else "not_generated"
+        return CourseConceptGraphOut(
+            course_id=course_id,
+            mermaid="",
+            status=status,
+            nodes=[],
+            edges=[],
+            created_at=None,
+            updated_at=None,
+        ).model_dump(by_alias=True)
+
+    return CourseConceptGraphOut.model_validate(graph).model_dump(by_alias=True)
+
+
+@router.post("/{course_id}/concept-graph/regenerate", status_code=202)
+async def regenerate_concept_graph(
+    course_id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    course_data = await storage.get_course(db, course_id)
+    if course_data is None:
+        return Response(
+            content=ErrorResponse(message="Course not found").model_dump_json(by_alias=True),
+            status_code=404,
+            media_type="application/json",
+        )
+
+    background_tasks.add_task(_regenerate_concept_graph_pipeline, course_id)
+    return {"message": "Detailed concept graph regeneration started."}
 
 
 @router.patch("/{course_id}/publish")

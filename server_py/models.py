@@ -49,6 +49,19 @@ class CourseModule(Base):
     images: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
 
 
+class CourseConceptGraph(Base):
+    __tablename__ = "course_concept_graphs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    course_id: Mapped[int] = mapped_column(Integer, ForeignKey("courses.id"), nullable=False, unique=True)
+    mermaid: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="ready")
+    nodes: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    edges: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
 class Enrollment(Base):
     __tablename__ = "enrollments"
 

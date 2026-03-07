@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
@@ -53,6 +53,16 @@ class CourseModuleOut(CamelModel):
 class CourseDetailOut(CourseOut):
     modules: Optional[List[CourseModuleOut]] = None
     creator: Optional[UserOut] = None
+
+
+class CourseConceptGraphOut(CamelModel):
+    course_id: int
+    mermaid: str
+    status: str
+    nodes: Optional[List[dict[str, Any]]] = None
+    edges: Optional[List[dict[str, Any]]] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 
 class CourseListOut(CourseOut):

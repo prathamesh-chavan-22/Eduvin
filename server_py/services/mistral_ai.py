@@ -2,6 +2,7 @@ import asyncio
 import os
 import json
 import logging
+import re
 from typing import Any
 from duckduckgo_search import DDGS
 
@@ -225,4 +226,166 @@ async def analyze_speaking_transcript(prompt: str, transcript: str) -> dict:
         "feedback": str(result.get("feedback", "Good effort! Keep practicing.")),
         "corrections": str(result.get("corrections", "")),
     }
+
+
+def _extract_headings(content: str, max_items: int = 4) -> list[str]:
+    headings: list[str] = []
+    for line in content.splitlines():
+        stripped = line.strip()
+        if re.match(r"^#{1,4}\s+", stripped):
+            heading = re.sub(r"^#{1,4}\s+", "", stripped).strip()
+            if heading:
+                headings.append(heading[:80])
+        if len(headings) >= max_items:
+            break
+    return headings
+
+
+def _fallback_mermaid(course_title: str, modules: list[dict[str, str]]) -> str:
+    safe_title = course_title.replace('"', "")[:80] or "Course"
+    lines = ["graph TD", f'    C0["{safe_title}"]']
+    previous_node = ""
+    for idx, module in enumerate(modules[:16], 1):
+        label = str(module.get("title", f"Module {idx}")).replace('"', "")[:80]
+        module_node = f"M{idx}"
+        lines.append(f'    {module_node}["{label}"]')
+        lines.append(f"    C0 --> {module_node}")
+
+        if previous_node:
+            lines.append(f"    {previous_node} --> {module_node}")
+        previous_node = module_node
+
+        content = str(module.get("content", ""))
+        headings = _extract_headings(content, max_items=5)
+        for h_idx, heading in enumerate(headings, 1):
+            sub_node = f"M{idx}_{h_idx}"
+            safe_heading = heading.replace('"', "")
+            lines.append(f'    {sub_node}["{safe_heading}"]')
+            lines.append(f"    {module_node} --> {sub_node}")
+
+        if not headings:
+            summary = content[:120].replace("\n", " ").replace('"', "").strip()
+            if summary:
+                sub_node = f"M{idx}_1"
+                lines.append(f'    {sub_node}["{summary}"]')
+                lines.append(f"    {module_node} --> {sub_node}")
+    return "\n".join(lines)
+
+
+def _sanitize_concept_graph(payload: dict[str, Any], course_title: str, modules: list[dict[str, str]]) -> dict[str, Any]:
+    mermaid = str(payload.get("mermaid", "")).strip()
+    if not mermaid.startswith("graph "):
+        mermaid = ""
+    else:
+        mermaid_lines = mermaid.splitlines()
+        if mermaid_lines:
+            mermaid_lines[0] = "graph TD"
+            mermaid = "\n".join(mermaid_lines)
+
+    nodes_raw = payload.get("nodes", [])
+    edges_raw = payload.get("edges", [])
+
+    nodes: list[dict[str, Any]] = []
+    if isinstance(nodes_raw, list):
+        seen_node_ids: set[str] = set()
+        for n in nodes_raw[:120]:
+            if not isinstance(n, dict):
+                continue
+            node_id = str(n.get("id", "")).strip()
+            label = str(n.get("label", "")).strip()
+            if not node_id or not label or node_id in seen_node_ids:
+                continue
+            seen_node_ids.add(node_id)
+            nodes.append({
+                "id": node_id[:40],
+                "label": label[:120],
+                "category": str(n.get("category", "concept"))[:40],
+            })
+
+    edges: list[dict[str, Any]] = []
+    if isinstance(edges_raw, list):
+        seen_edges: set[tuple[str, str, str]] = set()
+        for e in edges_raw[:240]:
+            if not isinstance(e, dict):
+                continue
+            source = str(e.get("source", "")).strip()
+            target = str(e.get("target", "")).strip()
+            if not source or not target:
+                continue
+            rel = str(e.get("relationship", "related"))[:40]
+            key = (source, target, rel)
+            if key in seen_edges:
+                continue
+            seen_edges.add(key)
+            edges.append({
+                "source": source[:40],
+                "target": target[:40],
+                "relationship": rel,
+            })
+
+    if not mermaid:
+        mermaid = _fallback_mermaid(course_title, modules)
+
+    return {
+        "mermaid": mermaid,
+        "nodes": nodes,
+        "edges": edges,
+        "status": "ready",
+    }
+
+
+async def generate_course_concept_graph(
+    course_title: str,
+    course_description: str,
+    modules: list[dict[str, str]],
+) -> dict[str, Any]:
+    modules_text = []
+    for idx, module in enumerate(modules[:20], 1):
+        title = str(module.get("title", "")).strip()
+        content = str(module.get("content", "")).strip()
+        modules_text.append(
+            f"{idx}. {title}\nSummary: {content[:1600]}"
+        )
+    modules_joined = "\n\n".join(modules_text)
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are an instructional designer who builds concept maps. "
+                "Return strict JSON with keys: mermaid, nodes, edges. "
+                "Rules:\n"
+                "1) mermaid must start with 'graph TD' and be a valid Mermaid flowchart.\n"
+                "2) nodes is an array of {id,label,category}.\n"
+                "3) edges is an array of {source,target,relationship}.\n"
+                "4) Build a detailed map with 20-60 nodes when source material supports it.\n"
+                "5) Include hierarchy (course->module->concept->subconcept), prerequisites, and cross-module dependencies.\n"
+                "6) Prefer explicit relationship labels: prerequisite, depends_on, expands, example_of, related_to.\n"
+                "7) Keep the graph acyclic where possible and visually hierarchical from top to bottom (TD)."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Course title: {course_title}\n"
+                f"Course description: {course_description}\n"
+                "Modules:\n"
+                f"{modules_joined}"
+            ),
+        },
+    ]
+
+    try:
+        raw = await _call_mistral(messages, temperature=0.2, timeout=90.0)
+        payload = json.loads(raw)
+    except Exception as e:
+        logger.warning("Concept graph generation failed, using fallback: %s", e)
+        return {
+            "mermaid": _fallback_mermaid(course_title, modules),
+            "nodes": [],
+            "edges": [],
+            "status": "ready",
+        }
+
+    return _sanitize_concept_graph(payload, course_title, modules)
 

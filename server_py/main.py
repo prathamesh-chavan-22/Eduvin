@@ -12,6 +12,7 @@ from config import PORT
 from database import async_session_factory, engine
 from session import create_session_table
 from seed import seed_database
+from models import Base
 
 from routers import auth, users, courses, enrollments, notifications, speaking, analysis, tutor, analytics, assessments
 
@@ -19,6 +20,8 @@ from routers import auth, users, courses, enrollments, notifications, speaking, 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     await create_session_table()
     async with async_session_factory() as db:
         await seed_database(db)

@@ -9,6 +9,7 @@ type CourseDetails = z.infer<typeof api.courses.get.responses[200]>;
 type InsertCourse = z.infer<typeof api.courses.create.input>;
 type Module = z.infer<typeof api.courses.getModules.responses[200]>[0];
 type InsertModule = z.infer<typeof api.courses.createModule.input>;
+type CourseConceptGraph = z.infer<typeof api.courses.getConceptGraph.responses[200]>;
 
 export function useCourses() {
   return useQuery<CourseList>({
@@ -45,6 +46,20 @@ export function useCourseModules(courseId: number) {
       return res.json();
     },
     enabled: !!courseId,
+  });
+}
+
+export function useCourseConceptGraph(courseId: number, options?: { refetchInterval?: number | false }) {
+  return useQuery<CourseConceptGraph>({
+    queryKey: [api.courses.getConceptGraph.path, courseId],
+    queryFn: async () => {
+      const url = buildUrl(api.courses.getConceptGraph.path, { id: courseId });
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch course concept graph");
+      return res.json();
+    },
+    enabled: !!courseId,
+    refetchInterval: options?.refetchInterval ?? false,
   });
 }
 
@@ -95,6 +110,24 @@ export function useGenerateCourse() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.courses.list.path] });
+    },
+  });
+}
+
+export function useRegenerateCourseConceptGraph(courseId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const url = buildUrl(api.courses.regenerateConceptGraph.path, { id: courseId });
+      const res = await fetch(url, {
+        method: api.courses.regenerateConceptGraph.method,
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to regenerate course concept graph");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.courses.getConceptGraph.path, courseId] });
     },
   });
 }

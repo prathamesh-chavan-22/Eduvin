@@ -1,14 +1,16 @@
 import { useParams, useLocation } from "wouter";
-import { useCourse, useCourseModules } from "@/hooks/use-courses";
+import { useCourse, useCourseModules, useCourseConceptGraph, useRegenerateCourseConceptGraph } from "@/hooks/use-courses";
 import { useEnrollments, useUpdateProgress, useCreateEnrollment } from "@/hooks/use-enrollments";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, CheckCircle, ChevronRight, PlayCircle, Volume2, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, ChevronRight, PlayCircle, Volume2, XCircle, Network } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import InlineTutorContent from "@/components/tutor/inline-tutor-content";
 import { useUpdateLearnerProfile } from "@/hooks/use-tutor";
+import MermaidDiagram from "@/components/mermaid-diagram";
+import { useToast } from "@/hooks/use-toast";
 
 interface QuizQuestion {
   q: string;
@@ -28,12 +30,18 @@ export default function CoursePlayer() {
   const { user } = useAuth();
   const { data: course, isLoading: courseLoading } = useCourse(courseId);
   const { data: modules = [], isLoading: modulesLoading } = useCourseModules(courseId);
+  const { data: conceptGraph, isLoading: graphLoading, isError: graphError } = useCourseConceptGraph(courseId, {
+    refetchInterval: 5000,
+  });
+  const regenerateGraph = useRegenerateCourseConceptGraph(courseId);
+  const { toast } = useToast();
 
   const { data: enrollments = [] } = useEnrollments();
   const updateProgress = useUpdateProgress();
   const enroll = useCreateEnrollment();
 
   const [activeModuleId, setActiveModuleId] = useState<number | null>(null);
+  const [contentView, setContentView] = useState<"module" | "graph">("module");
   const [showQuiz, setShowQuiz] = useState(false);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -170,6 +178,88 @@ export default function CoursePlayer() {
     ([qIdx, aIdx]) => quizData?.questions?.[qIdx]?.correct === aIdx
   ).length;
 
+  const handleOpenGraphInNewWindow = () => {
+    if (!conceptGraph?.mermaid) {
+      toast({
+        variant: "destructive",
+        title: "Graph not available",
+        description: "Generate or load a concept graph first.",
+      });
+      return;
+    }
+
+    const popup = window.open("", "course-concept-graph", "width=1400,height=900");
+    if (!popup) {
+      toast({
+        variant: "destructive",
+        title: "Popup blocked",
+        description: "Allow popups for this site to open the graph in a new window.",
+      });
+      return;
+    }
+
+    const title = course?.title ?? "Course";
+    const mermaidContent = JSON.stringify(conceptGraph.mermaid);
+
+    popup.document.open();
+    popup.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>${title} - Concept Graph</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #0f172a; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; background: #fff; position: sticky; top: 0; z-index: 10; }
+    .controls { display: flex; align-items: center; gap: 8px; }
+    button { border: 1px solid #cbd5e1; background: #fff; color: #0f172a; border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+    button:hover { background: #f1f5f9; }
+    #canvasWrap { height: calc(100vh - 62px); overflow: auto; padding: 16px; }
+    #canvas { transform-origin: top left; }
+    #graph { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; min-width: max-content; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <div class="topbar">
+    <div>
+      <strong>${title}</strong>
+      <div style="font-size:12px;color:#475569;">Concept Graph Viewer</div>
+    </div>
+    <div class="controls">
+      <button id="zoomOut">-</button>
+      <span id="zoomValue" style="font-size:12px; min-width:52px; text-align:center;">100%</span>
+      <button id="zoomIn">+</button>
+      <button id="reset">Reset</button>
+    </div>
+  </div>
+  <div id="canvasWrap">
+    <div id="canvas">
+      <div id="graph" class="mermaid"></div>
+    </div>
+  </div>
+  <script>
+    const graphEl = document.getElementById('graph');
+    const canvas = document.getElementById('canvas');
+    const zoomValue = document.getElementById('zoomValue');
+    let scale = 1;
+    const setScale = (next) => {
+      scale = Math.max(0.4, Math.min(3, next));
+      canvas.style.transform = 'scale(' + scale + ')';
+      zoomValue.textContent = Math.round(scale * 100) + '%';
+    };
+    document.getElementById('zoomIn').addEventListener('click', () => setScale(scale + 0.15));
+    document.getElementById('zoomOut').addEventListener('click', () => setScale(scale - 0.15));
+    document.getElementById('reset').addEventListener('click', () => setScale(1));
+    graphEl.textContent = ${mermaidContent};
+    mermaid.initialize({ startOnLoad: true, securityLevel: 'loose', theme: 'default' });
+  </script>
+</body>
+</html>`);
+    popup.document.close();
+  };
+
   return (
     <div className="h-full flex flex-col -m-4 lg:-m-8">
       {/* Header */}
@@ -206,6 +296,7 @@ export default function CoursePlayer() {
                     setActiveModuleId(m.id);
                     setShowQuiz(false);
                     resetQuiz();
+                    setContentView("module");
                   }}
                   className={`w-full text-left p-3 rounded-lg flex items-start gap-3 transition-all ${isActive
                     ? 'bg-primary/10 text-primary border border-primary/20'
@@ -227,9 +318,41 @@ export default function CoursePlayer() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-8 lg:p-12">
-          <div className="max-w-3xl mx-auto">
+          <div className={`${contentView === "graph" ? "max-w-6xl" : "max-w-3xl"} mx-auto`}>
             {activeModule ? (
               <div className="bg-card rounded-2xl shadow-xl border border-border/50 overflow-hidden">
+                <div className="px-8 lg:px-12 pt-6 pb-2 border-b border-border/50 flex items-center justify-between gap-3 bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={contentView === "module" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setContentView("module");
+                        setShowQuiz(false);
+                      }}
+                    >
+                      Module Content
+                    </Button>
+                    <Button
+                      variant={contentView === "graph" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setContentView("graph");
+                        setShowQuiz(false);
+                      }}
+                    >
+                      <Network className="w-4 h-4 mr-2" />
+                      Course Graph
+                    </Button>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {conceptGraph?.status === "ready"
+                      ? "Graph ready"
+                      : conceptGraph?.status === "generating"
+                        ? "Graph is generating..."
+                        : "Graph not generated yet"}
+                  </div>
+                </div>
                 {showQuiz && quizData && currentQuestion ? (
                   <div className="p-8 lg:p-12 animate-in fade-in slide-in-from-bottom-4">
                     {/* Quiz Header */}
@@ -326,6 +449,68 @@ export default function CoursePlayer() {
                       )}
                     </div>
                   </div>
+                ) : contentView === "graph" ? (
+                  <div className="p-8 lg:p-12 animate-in fade-in">
+                    <h2 className="text-3xl font-display font-bold mb-2">Course Concept Graph</h2>
+                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <p className="text-muted-foreground">
+                        Visual map of how course concepts connect across modules.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleOpenGraphInNewWindow}
+                          disabled={!conceptGraph?.mermaid}
+                        >
+                          Open in New Window
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            regenerateGraph.mutate(undefined, {
+                              onSuccess: () => {
+                                toast({
+                                  title: "Regeneration started",
+                                  description: "AI is building a detailed concept graph for this course.",
+                                });
+                              },
+                              onError: (err: any) => {
+                                toast({
+                                  variant: "destructive",
+                                  title: "Could not regenerate graph",
+                                  description: err?.message ?? "Please try again.",
+                                });
+                              },
+                            });
+                          }}
+                          disabled={regenerateGraph.isPending}
+                        >
+                          {regenerateGraph.isPending ? "Regenerating..." : "Regenerate Detailed Graph"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {graphLoading ? (
+                      <div className="space-y-4">
+                        <Skeleton className="h-8 w-60" />
+                        <Skeleton className="h-[260px] w-full" />
+                      </div>
+                    ) : graphError ? (
+                      <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 text-sm text-destructive">
+                        Could not load the concept graph right now.
+                      </div>
+                    ) : conceptGraph?.mermaid ? (
+                      <MermaidDiagram chart={conceptGraph.mermaid} interactive />
+                    ) : (
+                      <div className="p-4 rounded-xl border border-border/50 bg-muted/20 text-sm text-muted-foreground">
+                        {conceptGraph?.status === "generating"
+                          ? "The AI is generating the course graph. Please check back in a few moments."
+                          : "No concept graph is available for this course yet."}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="p-8 lg:p-12 animate-in fade-in">
                     <h2 className="text-3xl font-display font-bold mb-6">{activeModule.title}</h2>
@@ -365,13 +550,13 @@ export default function CoursePlayer() {
                 <div className="bg-muted/30 border-t border-border/50 p-6 flex justify-between items-center">
                   <div className="text-sm text-muted-foreground font-medium">
                     Module {activeIndex + 1} of {modules.length}
-                    {showQuiz && quizData && (
+                    {showQuiz && quizData && contentView === "module" && (
                       <span className="ml-2 text-primary">
                         • Quiz: {correctCount}/{answeredQuestions.size} correct
                       </span>
                     )}
                   </div>
-                  {!showQuiz && (
+                  {!showQuiz && contentView === "module" && (
                     <Button
                       size="lg"
                       className="shadow-lg hover:-translate-y-0.5 transition-transform"

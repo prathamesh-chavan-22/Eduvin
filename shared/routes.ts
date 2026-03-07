@@ -97,6 +97,30 @@ export const api = {
         200: z.array(z.custom<typeof courseModules.$inferSelect>()),
       },
     },
+    getConceptGraph: {
+      method: "GET" as const,
+      path: "/api/courses/:id/concept-graph" as const,
+      responses: {
+        200: z.object({
+          courseId: z.number(),
+          mermaid: z.string(),
+          status: z.string(),
+          nodes: z.array(z.record(z.any())).optional(),
+          edges: z.array(z.record(z.any())).optional(),
+          createdAt: z.string().nullable().optional(),
+          updatedAt: z.string().nullable().optional(),
+        }),
+        404: errorSchemas.notFound,
+      },
+    },
+    regenerateConceptGraph: {
+      method: "POST" as const,
+      path: "/api/courses/:id/concept-graph/regenerate" as const,
+      responses: {
+        202: z.object({ message: z.string() }),
+        404: errorSchemas.notFound,
+      },
+    },
     createModule: {
       method: "POST" as const,
       path: "/api/courses/:id/modules" as const,

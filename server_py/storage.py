@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlalchemy import select, update, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import User, Course, CourseModule, Enrollment, Notification, SpeakingPractice, WorkflowAnalysis, AnalysisResult, LearnerProfile, TutorMessage
+from models import User, Course, CourseModule, CourseConceptGraph, Enrollment, Notification, SpeakingPractice, WorkflowAnalysis, AnalysisResult, LearnerProfile, TutorMessage
 
 
 # --- Users ---
@@ -127,6 +127,43 @@ async def create_course_module(db: AsyncSession, *, course_id: int, title: str, 
     await db.commit()
     await db.refresh(module)
     return module
+
+
+async def get_course_concept_graph(db: AsyncSession, course_id: int) -> CourseConceptGraph | None:
+    result = await db.execute(
+        select(CourseConceptGraph).where(CourseConceptGraph.course_id == course_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def upsert_course_concept_graph(
+    db: AsyncSession,
+    *,
+    course_id: int,
+    mermaid: str,
+    status: str = "ready",
+    nodes: list | None = None,
+    edges: list | None = None,
+) -> CourseConceptGraph:
+    graph = await get_course_concept_graph(db, course_id)
+    if graph is None:
+        graph = CourseConceptGraph(
+            course_id=course_id,
+            mermaid=mermaid,
+            status=status,
+            nodes=nodes,
+            edges=edges,
+        )
+        db.add(graph)
+    else:
+        graph.mermaid = mermaid
+        graph.status = status
+        graph.nodes = nodes
+        graph.edges = edges
+
+    await db.commit()
+    await db.refresh(graph)
+    return graph
 
 
 # --- Enrollments ---
