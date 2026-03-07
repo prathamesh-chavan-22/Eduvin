@@ -143,15 +143,7 @@ export default function Login() {
               </form>
             )}
 
-            {/* Demo hints */}
-            <div className="mt-8 p-4 bg-muted/50 rounded-xl text-xs text-muted-foreground">
-              <p className="font-semibold text-foreground mb-2">Demo Credentials:</p>
-              <ul className="space-y-1">
-                <li>LD: <code className="bg-background px-1 py-0.5 rounded">ld@demo.com</code> / pass</li>
-                <li>Mgr: <code className="bg-background px-1 py-0.5 rounded">manager@demo.com</code> / pass</li>
-                <li>Emp: <code className="bg-background px-1 py-0.5 rounded">employee@demo.com</code> / pass</li>
-              </ul>
-            </div>
+            
           </CardContent>
         </Card>
       </div>
@@ -169,7 +161,7 @@ export default function Login() {
             Empower your team with continuous learning.
           </h2>
           <p className="text-xl text-muted-foreground">
-            LMS Pro brings all your organizational knowledge into one accessible, interactive platform.
+            EduVin AI brings all your organizational knowledge into one accessible, interactive platform.
           </p>
         </div>
       </div>

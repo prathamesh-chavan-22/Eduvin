@@ -30,23 +30,23 @@ async def seed_database(db: AsyncSession):
 
     # --- Users ---
     l_and_d = await storage.create_user(
-        db, email="admin@lms.local", password="password",
+        db, email="admin@eduvin.local", password="password",
         full_name="Admin User", role="l_and_d",
     )
     manager = await storage.create_user(
-        db, email="manager@lms.local", password="password",
+        db, email="manager@eduvin.local", password="password",
         full_name="Manager User", role="manager",
     )
     emp1 = await storage.create_user(
-        db, email="employee@lms.local", password="password",
+        db, email="employee@eduvin.local", password="password",
         full_name="John Employee", role="employee",
     )
     emp2 = await storage.create_user(
-        db, email="jane.doe@lms.local", password="password",
+        db, email="jane.doe@eduvin.local", password="password",
         full_name="Jane Doe", role="employee",
     )
     emp3 = await storage.create_user(
-        db, email="alex.kumar@lms.local", password="password",
+        db, email="alex.kumar@eduvin.local", password="password",
         full_name="Alex Kumar", role="employee",
     )
 

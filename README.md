@@ -1,108 +1,290 @@
-# EdTech LMS
+# EduVin AI
 
-A full-stack Learning Management System with a React frontend and Python FastAPI backend.
+> A comprehensive AI-powered Learning Management System for workforce training, skill development, and adaptive learning.
 
-## Prerequisites
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Node.js 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
 
-- **Node.js** (v18+) and npm
-- **Python** (3.11+)
-- **PostgreSQL** running locally
+---
 
-## Setup
+## 📋 Overview
 
-### 1. Install frontend dependencies
+EduVin AI is a modern, full-stack learning management platform designed for enterprise workforce development. It combines adaptive learning, AI-powered tutoring, skill gap analysis, and comprehensive content management into a unified solution.
+
+### Key Features
+
+- 🎓 **Adaptive Learning Paths** - Personalized course recommendations based on performance
+- 🤖 **AI Tutor** - Real-time learning assistance powered by Mistral AI
+- 🗣️ **Speaking Practice** - Interactive pronunciation and fluency training with Edge TTS
+- 📊 **Analytics Dashboard** - Role-based insights for learners, managers, and L&D teams
+- 📈 **Skill Gap Analysis** - Workforce skill assessment and training planning
+- 🎯 **Assessments & Quizzes** - Interactive evaluations with instant feedback
+- 🔔 **Real-time Notifications** - Stay updated on course progress and achievements
+- 👥 **Multi-Role Support** - Employee, Manager, and L&D Admin roles
+
+---
+
+## 🏗️ Architecture
+
+**Frontend:** React 18 + TypeScript + Vite + TailwindCSS + Shadcn/UI  
+**Backend:** Python 3.11 + FastAPI + SQLAlchemy (Async)  
+**Database:** PostgreSQL with async support  
+**AI Services:** Mistral AI (Tutoring), Edge TTS (Speech)  
+**Real-time:** WebSocket support for notifications  
+
+```
+┌─────────────────┐      ┌──────────────────┐      ┌─────────────┐
+│  React Client   │─────▶│  FastAPI Server  │─────▶│ PostgreSQL  │
+│  (Port 5173)    │      │   (Port 5000)    │      │             │
+└─────────────────┘      └──────────────────┘      └─────────────┘
+                                  │
+                         ┌────────┴────────┐
+                         │                 │
+                    ┌────▼────┐      ┌────▼────┐
+                    │ Mistral │      │Edge TTS │
+                    │   AI    │      │ Service │
+                    └─────────┘      └─────────┘
+```
+
+📖 **[View Detailed Architecture](docs/ARCHITECTURE.md)**
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Node.js** 18+ and npm
+- **Python** 3.11+
+- **PostgreSQL** 14+
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd Web-App-Stack
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your database credentials
+   ```
+
+4. **Setup database**
+   ```bash
+   createdb eduvin_ai
+   npm run db:push
+   ```
+
+5. **Run development servers**
+   ```bash
+   # Terminal 1 - Frontend
+   npm run dev:client
+
+   # Terminal 2 - Backend API
+   npm run dev:api
+   ```
+
+6. **Access the application**
+   - Frontend: http://localhost:5173
+   - API: http://localhost:5000
+   - API Docs: http://localhost:5000/docs
+
+📖 **[Detailed Setup Guide](docs/SETUP.md)**
+
+---
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/ARCHITECTURE.md) | System design, tech stack, and component overview |
+| [Setup Guide](docs/SETUP.md) | Detailed installation and configuration |
+| [Features](docs/FEATURES.md) | Comprehensive feature documentation |
+| [API Reference](docs/API.md) | REST API endpoints and schemas |
+| [Development Guide](docs/DEVELOPMENT.md) | Development workflow and best practices |
+
+---
+
+## 🎯 User Roles
+
+### 👨‍🎓 Employee (Learner)
+- Browse and enroll in courses
+- Complete lessons and assessments
+- Practice speaking with AI feedback
+- Get personalized AI tutoring
+- Track learning progress
+
+### 👔 Manager
+- View team progress and performance
+- Identify skill gaps in team members
+- Assign courses to team members
+- Monitor completion rates
+- Access team analytics
+
+### 🎓 L&D Admin
+- Manage course catalog
+- Upload workforce data
+- Run skill gap analyses
+- Generate training plans
+- Monitor platform analytics
+- Manage users and enrollments
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework:** React 18 with TypeScript
+- **Build Tool:** Vite
+- **Styling:** TailwindCSS + Shadcn/UI components
+- **State Management:** TanStack Query (React Query)
+- **Routing:** Wouter
+- **Charts:** Recharts
+- **Icons:** Lucide React
+- **Forms:** React Hook Form + Zod
+
+### Backend
+- **Framework:** FastAPI (Python 3.11+)
+- **ORM:** SQLAlchemy 2.0 (Async)
+- **Database:** PostgreSQL with asyncpg driver
+- **Validation:** Pydantic v2
+- **Sessions:** itsdangerous
+- **Server:** Uvicorn with auto-reload
+
+### AI/ML Services
+- **AI Tutor:** Mistral AI API
+- **TTS:** Edge TTS (Microsoft)
+- **Content Analysis:** Custom ML models
+
+### DevOps
+- **Database Migrations:** Drizzle Kit
+- **Package Manager:** npm
+- **Python Dependencies:** pip (pyproject.toml)
+- **Type Checking:** TypeScript + mypy (planned)
+
+---
+
+## 📁 Project Structure
+
+```
+Web-App-Stack/
+├── client/                 # React frontend application
+│   ├── src/
+│   │   ├── components/    # Reusable UI components
+│   │   ├── pages/         # Route-based page components
+│   │   ├── hooks/         # Custom React hooks
+│   │   └── lib/           # Utilities and helpers
+│   └── public/            # Static assets
+│
+├── server_py/             # Python FastAPI backend
+│   ├── routers/           # API route handlers
+│   │   ├── auth.py       # Authentication endpoints
+│   │   ├── courses.py    # Course management
+│   │   ├── speaking.py   # Speaking practice
+│   │   ├── tutor.py      # AI tutor endpoints
+│   │   ├── analytics.py  # Analytics & reporting
+│   │   └── ...
+│   ├── services/          # Business logic services
+│   │   ├── mistral_ai.py # AI integration
+│   │   ├── edge_tts_service.py
+│   │   └── lesson_recommender.py
+│   ├── models.py          # SQLAlchemy models
+│   ├── schemas.py         # Pydantic schemas
+│   └── main.py            # Application entry point
+│
+├── shared/                # Shared TypeScript types
+│   ├── schema.ts          # Database schema types
+│   └── routes.ts          # API route definitions
+│
+├── docs/                  # Documentation (modular)
+└── script/                # Build and utility scripts
+```
+
+---
+
+## 🧪 Testing
 
 ```bash
-npm install
+# Run frontend tests
+npm run test
+
+# Run backend tests (when implemented)
+cd server_py && pytest
+
+# Type checking
+npm run check
 ```
 
-### 2. Install Python dependencies
+---
+
+## 🚢 Deployment
 
 ```bash
-pip install fastapi 'uvicorn[standard]' 'sqlalchemy[asyncio]' asyncpg pydantic python-dotenv itsdangerous
+# Build frontend for production
+npm run build
+
+# Start production server
+npm start
 ```
 
-### 3. Configure environment
+📖 **[Deployment Guide](docs/DEPLOYMENT.md)** (coming soon)
 
-Create a `.env` file in the project root:
+---
 
-```
-DATABASE_URL=postgresql://your_user@localhost:5432/edtech_lms
-SESSION_SECRET=your_secret_here
-```
+## 🔐 Default Credentials
 
-### 4. Create the database
+The system seeds demo users on first startup:
 
-```bash
-createdb edtech_lms
-```
+| Role | Email | Password |
+|------|-------|----------|
+| L&D Admin | admin@eduvin.local | password |
+| Manager | manager@eduvin.local | password |
+| Employee | employee@eduvin.local | password |
 
-Push the schema:
+⚠️ **Change these credentials in production!**
 
-```bash
-npm run db:push
-```
+---
 
-The server will seed initial data (users, courses, etc.) on first startup if the database is empty.
+## 🤝 Contributing
 
-## Running (Development)
+Contributions are welcome! Please follow these guidelines:
 
-Open two terminals:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-**Terminal 1 — API server (FastAPI on port 5000):**
+---
 
-```bash
-npm run dev:api
-```
+## 📝 License
 
-**Terminal 2 — Frontend dev server (Vite on port 5173):**
+This project is licensed under the MIT License.
 
-```bash
-npm run dev:client
-```
+---
 
-Then open **http://localhost:5173** in your browser.
+## 🙏 Acknowledgments
 
-## Seed Accounts
+- Built with [FastAPI](https://fastapi.tiangolo.com/)
+- UI components from [Shadcn/UI](https://ui.shadcn.com/)
+- Icons by [Lucide](https://lucide.dev/)
+- AI powered by [Mistral AI](https://mistral.ai/)
 
-| Email                | Password   | Role      |
-|----------------------|------------|-----------|
-| admin@lms.local      | password   | L&D Admin |
-| manager@lms.local    | password   | Manager   |
-| employee@lms.local   | password   | Employee  |
+---
 
-## Project Structure
+## 📧 Support
 
-```
-├── client/            # React frontend (Vite)
-├── server/            # Original Express.js backend (kept for reference)
-├── server_py/         # FastAPI backend
-│   ├── main.py        # App entry point, lifespan, CORS, routers
-│   ├── config.py      # Environment config
-│   ├── database.py    # SQLAlchemy async engine
-│   ├── models.py      # ORM models
-│   ├── schemas.py     # Pydantic request/response models
-│   ├── storage.py     # CRUD operations
-│   ├── session.py     # Cookie session middleware
-│   ├── dependencies.py# FastAPI dependencies (auth, DB)
-│   ├── seed.py        # Database seeding
-│   └── routers/       # Route handlers
-│       ├── auth.py
-│       ├── users.py
-│       ├── courses.py
-│       ├── enrollments.py
-│       ├── notifications.py
-│       └── speaking.py
-├── shared/            # Shared schema definitions
-└── package.json
-```
+For questions or issues, please open an issue on GitHub or contact the development team.
 
-## Scripts
+---
 
-| Script          | Command                        |
-|-----------------|--------------------------------|
-| `dev:api`       | Start FastAPI server (port 5000) |
-| `dev:client`    | Start Vite dev server (port 5173) |
-| `dev`           | Start original Express server  |
-| `build`         | Build for production           |
-| `db:push`       | Push Drizzle schema to database |
+**Built with ❤️ for modern workforce learning**

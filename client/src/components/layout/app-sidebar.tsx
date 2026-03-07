@@ -55,7 +55,7 @@ export function AppSidebar() {
             <ShieldAlert className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-display font-bold text-xl leading-none">LMS Pro</h1>
+            <h1 className="font-display font-bold text-xl leading-none">EduVin AI</h1>
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
               {role.replace('_', ' ')}
             </p>
