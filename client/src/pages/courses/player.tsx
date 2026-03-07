@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, CheckCircle, ChevronRight, PlayCircle, Volume2, XCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import MarkdownContent from "@/components/markdown-content";
+import InlineTutorContent from "@/components/tutor/inline-tutor-content";
+import { useUpdateLearnerProfile } from "@/hooks/use-tutor";
 
 interface QuizQuestion {
   q: string;
@@ -38,6 +39,7 @@ export default function CoursePlayer() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answeredQuestions, setAnsweredQuestions] = useState<Map<number, number>>(new Map());
   const [showResult, setShowResult] = useState(false);
+  const updateLearnerProfile = useUpdateLearnerProfile();
 
   // Find or auto-enroll
   const myEnrollment = enrollments.find(e => e.courseId === courseId && e.userId === user?.id);
@@ -120,7 +122,17 @@ export default function CoursePlayer() {
       setSelectedAnswer(null);
       setShowResult(false);
     } else {
-      // Quiz complete — move to next module
+      // Quiz complete — update learner profile with quiz results
+      if (quizData && activeModule) {
+        const allAnswers = new Map(answeredQuestions);
+        allAnswers.set(currentQuestionIdx, selectedAnswer!);
+        let finalCorrect = 0;
+        allAnswers.forEach((aIdx: number, qIdx: number) => {
+          if (quizData.questions?.[qIdx]?.correct === aIdx) finalCorrect++;
+        });
+        const quizScore = Math.round((finalCorrect / totalQuestions) * 100);
+        updateLearnerProfile.mutate({ quizScore, moduleTitle: activeModule.title });
+      }
       await handleModuleComplete();
     }
   };
@@ -318,7 +330,12 @@ export default function CoursePlayer() {
                   <div className="p-8 lg:p-12 animate-in fade-in">
                     <h2 className="text-3xl font-display font-bold mb-6">{activeModule.title}</h2>
                     <div className="mb-8">
-                      <MarkdownContent content={activeModule.content} />
+                      <InlineTutorContent
+                        courseId={courseId}
+                        moduleId={activeModuleId || modules[0]?.id || 0}
+                        moduleTitle={activeModule.title}
+                        content={activeModule.content}
+                      />
                     </div>
 
                     {/* Audio Narration */}

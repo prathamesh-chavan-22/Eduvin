@@ -121,3 +121,30 @@ class AppSession(Base):
     sid: Mapped[str] = mapped_column(Text, primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
+class LearnerProfile(Base):
+    __tablename__ = "learner_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    knowledge_level: Mapped[str] = mapped_column(Text, nullable=False, server_default="beginner")
+    avg_quiz_score: Mapped[float] = mapped_column(Float, nullable=False, server_default="0")
+    total_modules_completed: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    struggle_topics: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    strong_topics: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    preferred_pace: Mapped[str] = mapped_column(Text, nullable=False, server_default="normal")
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class TutorMessage(Base):
+    __tablename__ = "tutor_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    course_id: Mapped[int] = mapped_column(Integer, ForeignKey("courses.id"), nullable=False)
+    module_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("course_modules.id"), nullable=True)
+    role: Mapped[str] = mapped_column(Text, nullable=False)  # "user" or "assistant"
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    audio_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())

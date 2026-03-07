@@ -208,3 +208,40 @@ class AnalysisOut(CamelModel):
 
 class AnalysisDetailOut(AnalysisOut):
     results: Optional[List[AnalysisResultOut]] = None
+
+
+# --- Tutor models ---
+
+
+class TutorMessageOut(CamelModel):
+    id: int
+    user_id: int
+    course_id: int
+    module_id: Optional[int] = None
+    role: str
+    content: str
+    audio_url: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class TutorChatInput(CamelModel):
+    message: str
+    module_id: int
+    course_id: int
+
+
+class LearnerProfileOut(CamelModel):
+    id: int
+    user_id: int
+    knowledge_level: str
+    avg_quiz_score: float
+    total_modules_completed: int
+    struggle_topics: Optional[List[str]] = None
+    strong_topics: Optional[List[str]] = None
+    preferred_pace: str
+    updated_at: Optional[datetime] = None
+
+
+class UpdateLearnerProfile(CamelModel):
+    quiz_score: float
+    module_title: str

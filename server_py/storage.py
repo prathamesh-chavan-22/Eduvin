@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlalchemy import select, update, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import User, Course, CourseModule, Enrollment, Notification, SpeakingPractice, WorkflowAnalysis, AnalysisResult
+from models import User, Course, CourseModule, Enrollment, Notification, SpeakingPractice, WorkflowAnalysis, AnalysisResult, LearnerProfile, TutorMessage
 
 
 # --- Users ---
@@ -316,3 +316,52 @@ async def create_analysis_result(db: AsyncSession, *, analysis_id: int, employee
     await db.commit()
     await db.refresh(ar)
     return ar
+
+
+# --- AI Tutor ---
+
+
+async def get_or_create_learner_profile(db: AsyncSession, user_id: int) -> "LearnerProfile":
+    result = await db.execute(select(LearnerProfile).where(LearnerProfile.user_id == user_id))
+    profile = result.scalar_one_or_none()
+    if profile is None:
+        profile = LearnerProfile(user_id=user_id)
+        db.add(profile)
+        await db.commit()
+        await db.refresh(profile)
+    return profile
+
+
+async def update_learner_profile(db: AsyncSession, user_id: int, **fields) -> "LearnerProfile":
+    profile = await get_or_create_learner_profile(db, user_id)
+    for key, value in fields.items():
+        if hasattr(profile, key):
+            setattr(profile, key, value)
+    await db.commit()
+    await db.refresh(profile)
+    return profile
+
+
+async def get_tutor_history(db: AsyncSession, user_id: int, course_id: int, limit: int = 20) -> list["TutorMessage"]:
+    result = await db.execute(
+        select(TutorMessage)
+        .where(TutorMessage.user_id == user_id, TutorMessage.course_id == course_id)
+        .order_by(desc(TutorMessage.created_at))
+        .limit(limit)
+    )
+    messages = list(result.scalars().all())
+    messages.reverse()  # oldest first
+    return messages
+
+
+async def create_tutor_message(db: AsyncSession, *, user_id: int, course_id: int,
+                               module_id: int | None = None, role: str, content: str,
+                               audio_url: str | None = None) -> "TutorMessage":
+    msg = TutorMessage(
+        user_id=user_id, course_id=course_id, module_id=module_id,
+        role=role, content=content, audio_url=audio_url,
+    )
+    db.add(msg)
+    await db.commit()
+    await db.refresh(msg)
+    return msg
