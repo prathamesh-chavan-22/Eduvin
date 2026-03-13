@@ -1,0 +1,11 @@
+Employee Name,Email,Department,Role,Manager Remarks
+Camila Torres,camila.torres@company.com,Engineering,Data Scientist,"Camila delivers strong models but should focus on feature engineering and productionization best practices."
+Hunter Graham,hunter.graham@company.com,Sales,Sales Development Rep,"Hunter is great at outreach volume; needs better qualification to boost meetings-to-opportunity rate."
+Mila Flores,mila.flores@company.com,Design,Motion Designer,"Mila creates engaging motion but should optimize assets for performance in web contexts."
+Julian Price,julian.price@company.com,Marketing,Acquisition Lead,"Julian scales channels well but needs improved attribution modeling."
+Peyton Kim,peyton.kim@company.com,Engineering,Platform SRE,"Peyton reduces toil effectively; next steps include capacity forecasting and runbook automation."
+Dylan Brooks,dylan.brooks@company.com,Customer Support,Support Lead,"Dylan mentors juniors well but should implement standard QA for ticket handling."
+Leah Zhang,leah.zhang@company.com,Engineering,DevOps Engineer,"Leah improves CI speed; recommend work on security scanning and policy-as-code."
+Adam Foster,adam.foster@company.com,Sales,Enterprise AE,"Adam has strong pipeline for large deals but needs tighter internal coordination for multi-stakeholder closes."
+Clara Hughes,clara.hughes@company.com,Design,UX Writer,"Clara writes clear microcopy; should pair with analytics to A/B test key flows."
+Evan Scott,evan.scott@company.com,Marketing,Partnerships,"Evan develops partners well but should formalize ROI metrics and partner reporting."

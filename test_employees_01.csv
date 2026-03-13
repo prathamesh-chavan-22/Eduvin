@@ -1,0 +1,11 @@
+Employee Name,Email,Department,Role,Manager Remarks
+Olivia Martin,olivia.martin@company.com,Engineering,Backend Developer,"Olivia shows strong API design skills but should improve database indexing and query optimization. Recommend an advanced SQL workshop."
+Ethan Patel,ethan.patel@company.com,Sales,Account Executive,"Ethan hits his targets but could improve negotiation strategies for enterprise deals. Presentation polish would help."
+Maya Singh,maya.singh@company.com,Design,UX Researcher,"Maya conducts thorough user interviews but must better synthesize findings into actionable design changes. More training on research synthesis is recommended."
+Noah Thompson,noah.thompson@company.com,Marketing,Performance Marketer,"Noah is data-driven but needs to broaden his creative testing palette and understand brand voice alignment."
+Sophia Lopez,sophia.lopez@company.com,Engineering,Frontend Developer,"Sophia is proficient in Vue and React but needs stronger testing discipline and TypeScript familiarity."
+Liam Brown,liam.brown@company.com,Customer Support,Support Specialist,"Liam is patient with customers but needs to get faster at using internal tooling and documenting edge cases."
+Ava Wilson,ava.wilson@company.com,Engineering,DevOps Engineer,"Ava automates well; focus next on AWS cost optimization and observability best practices."
+William Lee,william.lee@company.com,Sales,Sales Manager,"William leads by example but should incorporate more data-driven coaching and CRM hygiene into his process."
+Isabella Davis,isabella.davis@company.com,Design,Visual Designer,"Isabella creates strong visuals but needs to collaborate earlier with PMs and engineers for feasibility."
+James Miller,james.miller@company.com,Marketing,Content Writer,"James writes clear content but should increase SEO knowledge and analytics-driven content iteration."

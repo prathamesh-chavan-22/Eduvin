@@ -1,0 +1,11 @@
+Employee Name,Email,Department,Role,Manager Remarks
+Charlotte Nguyen,charlotte.nguyen@company.com,Engineering,Fullstack Developer,"Charlotte balances frontend and backend work well; should focus on scalable state management and service boundaries."
+Benjamin Carter,benjamin.carter@company.com,Sales,Account Executive,"Benjamin is persistent in prospecting but needs better qualification to shorten the sales cycle."
+Amelia Rivera,amelia.rivera@company.com,Design,Product Designer,"Amelia excels at cross-functional collaboration but would benefit from advanced prototyping techniques."
+Lucas Wright,lucas.wright@company.com,Marketing,Growth Manager,"Lucas tests aggressively; needs stronger storytelling to convert top-funnel audiences."
+Harper Young,harper.young@company.com,Engineering,QA Engineer,"Harper writes thorough test plans but should champion automation of flaky tests and CI integration."
+Henry Scott,henry.scott@company.com,Customer Support,Support Engineer,"Henry solves complex tickets but should document internal runbooks for recurring issues."
+Ella Green,ella.green@company.com,Engineering,Site Reliability Engineer,"Ella is proactive on monitoring; next step is incident postmortem facilitation and capacity planning."
+Alexander King,alexander.king@company.com,Sales,Business Development,"Alexander builds relationships well but should focus more on pipeline forecasting and qualification metrics."
+Zoey Flores,zoey.flores@company.com,Design,UX Designer,"Zoey needs to increase usability testing cadence and incorporate metrics into design decisions."
+Daniel Rivera,daniel.rivera@company.com,Marketing,Brand Manager,"Daniel provides strong brand direction but needs to tie creative to measurable campaign KPIs."

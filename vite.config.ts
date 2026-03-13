@@ -32,6 +32,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    allowedHosts: ["composed-violently-coyote.ngrok-free.app"],
     fs: {
       strict: true,
       deny: ["**/.*"],

@@ -1,0 +1,11 @@
+Employee Name,Email,Department,Role,Manager Remarks
+Grace Hall,grace.hall@company.com,Engineering,Data Engineer,"Grace builds robust pipelines but should improve on data modeling and schema versioning best practices."
+Owen Baker,owen.baker@company.com,Sales,Account Manager,"Owen maintains great client relationships but should focus on upsell strategies and contract renewals."
+Chloe Adams,chloe.adams@company.com,Design,Researcher,"Chloe's field work is excellent; needs to present findings with clearer business impact recommendations."
+Caleb Perez,caleb.perez@company.com,Marketing,Email Marketer,"Caleb runs solid campaigns but should segment audiences more effectively for higher engagement."
+Hannah Coleman,hannah.coleman@company.com,Engineering,Mobile Developer,"Hannah delivers stable apps; recommended to deepen knowledge in performance profiling and native integrations."
+Jack Rivera,jack.rivera@company.com,Customer Support,Customer Success,"Jack drives adoption but could be more proactive with churn signals and early intervention."
+Luna Reyes,luna.reyes@company.com,Engineering,Cloud Engineer,"Luna is skilled with Terraform; next focus on multi-region deployments and DR planning."
+Mason Brooks,mason.brooks@company.com,Sales,Sales Engineer,"Mason pairs well with account execs but needs to develop stronger demo narratives for technical buyers."
+Aria Powell,aria.powell@company.com,Design,Interaction Designer,"Aria crafts smooth interactions but should prioritize accessibility and motion performance."
+Logan Rivera,logan.rivera@company.com,Marketing,Social Media Manager,"Logan is creative but must tighten measurement frameworks and ROI tracking for social programs."

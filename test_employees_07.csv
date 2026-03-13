@@ -1,0 +1,11 @@
+Employee Name,Email,Department,Role,Manager Remarks
+Nina Brooks,nina.brooks@company.com,Engineering,Machine Learning Engineer,"Nina builds inference pipelines well; should document model contracts and data drift alerts."
+Omar Reyes,omar.reyes@company.com,Sales,Key Account Manager,"Omar is excellent with renewals but should push for strategic upsell initiatives."
+Sienna Clarke,sienna.clarke@company.com,Design,Accessibility Specialist,"Sienna champions accessibility but needs to scale audits across all products."
+Theo Bennett,theo.bennett@company.com,Marketing,Campaign Manager,"Theo runs consistent campaigns; encourage experiments with messaging personalization."
+Riley Price,riley.price@company.com,Engineering,Integration Engineer,"Riley handles third-party integrations well; add more contract tests and monitoring."
+Gabriel Morales,gabriel.morales@company.com,Customer Support,Implementation Specialist,"Gabriel onboards customers smoothly but should create repeatable implementation templates."
+Sofia Kim,sofia.kim@company.com,Engineering,Site Reliability Engineer,"Sofia improves uptime; focus next on runbook review cadence and incident response drills."
+Miles Scott,miles.scott@company.com,Sales,Sales Ops,"Miles optimizes workflows but should publish clearer sales enablement playbooks."
+Piper Barnes,piper.barnes@company.com,Design,Design Researcher,"Piper's prototypes are insightful; translate findings into prioritized product recommendations."
+Felix Greene,felix.greene@company.com,Marketing,Content Ops,"Felix organizes content pipelines well; build templates to scale content production."
