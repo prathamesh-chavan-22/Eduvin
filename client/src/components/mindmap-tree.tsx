@@ -1,11 +1,24 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ZoomIn, ZoomOut, Maximize2, Download } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, Download, Info, Flag, CheckCircle2, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface MindmapNode {
   label: string;
   children: MindmapNode[];
+  // Enriched schema fields (optional for backwards compatibility)
+  type?: string;
+  description?: string;
+  keyPoints?: string[];
+  tags?: string[];
+  confidence?: number;
 }
 
 interface Position {
@@ -22,26 +35,31 @@ interface RenderedNode {
   children: RenderedNode[];
 }
 
-// Color palette for different depth levels
-const DEPTH_COLORS = [
-  "bg-violet-500 text-white",
-  "bg-blue-500 text-white",
-  "bg-cyan-500 text-white",
-  "bg-teal-500 text-white",
-  "bg-emerald-500 text-white",
-  "bg-amber-500 text-white",
-  "bg-rose-500 text-white",
+// Color palette for different node types
+const NODE_TYPE_STYLES: Record<string, { bg: string; stroke: string; icon?: React.ReactNode }> = {
+  root: { bg: "bg-violet-500 text-white", stroke: "#8b5cf6" },
+  topic: { bg: "bg-blue-500 text-white", stroke: "#3b82f6" },
+  subtopic: { bg: "bg-cyan-500 text-white", stroke: "#06b6d4" },
+  detail: { bg: "bg-slate-500 text-white", stroke: "#64748b" },
+  action_item: { bg: "bg-amber-500 text-white", stroke: "#f59e0b", icon: <Flag className="w-3 h-3" /> },
+  decision: { bg: "bg-emerald-500 text-white", stroke: "#10b981", icon: <CheckCircle2 className="w-3 h-3" /> },
+};
+
+const DEFAULT_COLORS = [
+  { bg: "bg-violet-500 text-white", stroke: "#8b5cf6" },
+  { bg: "bg-blue-500 text-white", stroke: "#3b82f6" },
+  { bg: "bg-cyan-500 text-white", stroke: "#06b6d4" },
+  { bg: "bg-teal-500 text-white", stroke: "#14b8a6" },
+  { bg: "bg-emerald-500 text-white", stroke: "#10b981" },
+  { bg: "bg-amber-500 text-white", stroke: "#f59e0b" },
+  { bg: "bg-rose-500 text-white", stroke: "#f43f5e" },
 ];
 
-const STROKE_COLORS = [
-  "#8b5cf6",
-  "#3b82f6",
-  "#06b6d4",
-  "#14b8a6",
-  "#10b981",
-  "#f59e0b",
-  "#f43f5e",
-];
+function getNodeStyle(node: MindmapNode, depth: number) {
+  const typeStyle = node.type ? NODE_TYPE_STYLES[node.type] : null;
+  if (typeStyle) return typeStyle;
+  return DEFAULT_COLORS[depth % DEFAULT_COLORS.length];
+}
 
 interface MindmapTreeProps {
   data: MindmapNode;
@@ -53,14 +71,15 @@ export function MindmapTree({ data }: MindmapTreeProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(["root"]));
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<Position>({ x: 0, y: 0 });
+  const [hoveredNode, setHoveredNode] = useState<MindmapNode | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Calculate tree layout
-  const NODE_WIDTH = 180;
-  const NODE_HEIGHT = 50;
-  const HORIZONTAL_SPACING = 220;
-  const VERTICAL_SPACING = 70;
+  const NODE_WIDTH = 200;
+  const NODE_HEIGHT = 56;
+  const HORIZONTAL_SPACING = 240;
+  const VERTICAL_SPACING = 75;
 
   const getNodeId = (path: string[]) => path.join("-") || "root";
 
@@ -216,26 +235,88 @@ export function MindmapTree({ data }: MindmapTreeProps) {
     link.click();
   };
 
+  // Render node tooltip
+  const NodeTooltip = ({ node }: { node: MindmapNode }) => {
+    if (!node.description && !node.keyPoints?.length && !node.tags?.length && node.confidence == null) {
+      return null;
+    }
+
+    return (
+      <div className="max-w-xs space-y-2 p-3">
+        {node.description && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1">Description</p>
+            <p className="text-sm">{node.description}</p>
+          </div>
+        )}
+        {node.keyPoints && node.keyPoints.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1">
+              <Lightbulb className="w-3 h-3 inline mr-1" />
+              Key Points
+            </p>
+            <ul className="text-sm space-y-1">
+              {node.keyPoints.slice(0, 4).map((kp, i) => (
+                <li key={i} className="flex items-start gap-1.5">
+                  <span className="mt-1.5 w-1 h-1 rounded-full bg-primary shrink-0" />
+                  <span className="line-clamp-2">{kp}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {node.tags && node.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {node.tags.slice(0, 5).map((tag, i) => (
+              <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+        {node.confidence != null && (
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-medium text-muted-foreground">Confidence</p>
+            <div className="flex-1 h-1.5 rounded-full bg-muted">
+              <div
+                className={`h-full rounded-full ${
+                  node.confidence > 0.8
+                    ? "bg-emerald-500"
+                    : node.confidence > 0.6
+                    ? "bg-amber-500"
+                    : "bg-red-500"
+                }`}
+                style={{ width: `${node.confidence * 100}%` }}
+              />
+            </div>
+            <span className="text-xs">{(node.confidence * 100).toFixed(0)}%</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render node and edges recursively
   const renderNode = (renderedNode: RenderedNode, path: string[]) => {
     const { node, x, y, depth, expanded } = renderedNode;
     const nodeId = getNodeId(path);
-    const colorIndex = depth % DEPTH_COLORS.length;
+    const style = getNodeStyle(node, depth);
 
     return (
       <g key={nodeId}>
         {/* Edges to children */}
         {renderedNode.children.map((child, index) => {
           const childPath = [...path, String(index)];
+          const childStyle = getNodeStyle(child.node, child.depth);
           return (
             <g key={getNodeId(childPath)}>
               <motion.path
-                d={`M ${x + NODE_WIDTH} ${y + NODE_HEIGHT / 2} 
+                d={`M ${x + NODE_WIDTH} ${y + NODE_HEIGHT / 2}
                     C ${x + NODE_WIDTH + 60} ${y + NODE_HEIGHT / 2},
                       ${child.x - 60} ${child.y + NODE_HEIGHT / 2},
                       ${child.x} ${child.y + NODE_HEIGHT / 2}`}
                 fill="none"
-                stroke={STROKE_COLORS[child.depth % STROKE_COLORS.length]}
+                stroke={childStyle.stroke}
                 strokeWidth="3"
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 1 }}
@@ -246,36 +327,63 @@ export function MindmapTree({ data }: MindmapTreeProps) {
           );
         })}
 
-        {/* Node rectangle */}
-        <motion.g
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, delay: depth * 0.1 }}
-        >
-          <foreignObject x={x} y={y} width={NODE_WIDTH} height={NODE_HEIGHT}>
-            <div
-              className={`w-full h-full rounded-lg shadow-md cursor-pointer select-none flex items-center justify-center px-3 py-2 ${DEPTH_COLORS[colorIndex]} ${
-                node.children.length > 0 ? "hover:brightness-110" : ""
-              }`}
-              onClick={() => node.children.length > 0 && toggleNode(path)}
-              style={{ minHeight: NODE_HEIGHT }}
-            >
-              <p className="text-sm font-medium text-center leading-tight line-clamp-2">{node.label}</p>
-            </div>
-          </foreignObject>
+        {/* Node rectangle with tooltip */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.g
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: depth * 0.1 }}
+                onMouseEnter={() => setHoveredNode(node)}
+                onMouseLeave={() => setHoveredNode(null)}
+              >
+                <foreignObject x={x} y={y} width={NODE_WIDTH} height={NODE_HEIGHT}>
+                  <div
+                    className={`w-full h-full rounded-lg shadow-md cursor-pointer select-none flex items-center gap-2 px-3 py-2 ${style.bg} ${
+                      node.children.length > 0 ? "hover:brightness-110" : ""
+                    }`}
+                    onClick={() => node.children.length > 0 && toggleNode(path)}
+                    style={{ minHeight: NODE_HEIGHT }}
+                  >
+                    {/* Type icon */}
+                    {style.icon && <span className="shrink-0">{style.icon}</span>}
 
-          {/* Expand/collapse indicator */}
-          {node.children.length > 0 && (
-            <circle
-              cx={x + NODE_WIDTH}
-              cy={y + NODE_HEIGHT / 2}
-              r="8"
-              fill={expanded ? "#10b981" : "#f59e0b"}
-              stroke="white"
-              strokeWidth="2"
-            />
-          )}
-        </motion.g>
+                    {/* Label */}
+                    <p className="text-sm font-medium text-center leading-tight flex-1 line-clamp-2">
+                      {node.label}
+                    </p>
+
+                    {/* Confidence mini-indicator */}
+                    {node.confidence != null && (
+                      <div className="w-6 h-1 rounded-full bg-white/30 shrink-0">
+                        <div
+                          className="h-full rounded-full bg-white"
+                          style={{ width: `${node.confidence * 100}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </foreignObject>
+
+                {/* Expand/collapse indicator */}
+                {node.children.length > 0 && (
+                  <circle
+                    cx={x + NODE_WIDTH}
+                    cy={y + NODE_HEIGHT / 2}
+                    r="8"
+                    fill={expanded ? "#10b981" : "#f59e0b"}
+                    stroke="white"
+                    strokeWidth="2"
+                  />
+                )}
+              </motion.g>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="start" className="max-w-xs">
+              <NodeTooltip node={node} />
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </g>
     );
   };

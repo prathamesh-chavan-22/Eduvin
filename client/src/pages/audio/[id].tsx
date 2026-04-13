@@ -7,9 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft, Loader2, AlertCircle, FileAudio, Brain, FileText,
-  Download, Copy, Check,
+  Download, Copy, Check, TreePine,
 } from "lucide-react";
 import { MindmapTree } from "@/components/mindmap-tree";
+import { EditableMindmap } from "@/components/editable-mindmap";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,6 +19,7 @@ export default function MindmapViewerPage() {
   const audioId = id ? parseInt(id, 10) : null;
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+  const [mindmapView, setMindmapView] = useState<"visual" | "editable">("visual");
 
   const { data: audio, isLoading, error } = useAudioUpload(audioId);
 
@@ -127,6 +129,25 @@ export default function MindmapViewerPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Check if mindmap data has the enriched v2 schema
+  const isEnrichedMindmap = audio.mindmapData && "summary" in audio.mindmapData;
+
+  // Normalize mindmap data for the visual component
+  const getVisualMindmapData = () => {
+    if (!audio.mindmapData) return null;
+    if (isEnrichedMindmap) {
+      return audio.mindmapData.summary;
+    }
+    // Legacy format: { root, children }
+    if ("root" in audio.mindmapData) {
+      return {
+        label: audio.mindmapData.root,
+        children: audio.mindmapData.children || [],
+      };
+    }
+    return audio.mindmapData;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -150,6 +171,41 @@ export default function MindmapViewerPage() {
         </Badge>
       </div>
 
+      {/* Mindmap metadata info */}
+      {isEnrichedMindmap && audio.mindmapData.metadata && (
+        <Card>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Version</p>
+                <p className="font-medium">{audio.mindmapData.version || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Total Words</p>
+                <p className="font-medium">{audio.mindmapData.metadata.totalWords?.toLocaleString() || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Segments</p>
+                <p className="font-medium">{audio.mindmapData.metadata.totalChunks || 0}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Generated</p>
+                <p className="font-medium">
+                  {audio.mindmapData.metadata.generatedAt
+                    ? new Date(audio.mindmapData.metadata.generatedAt).toLocaleString()
+                    : "N/A"}
+                </p>
+              </div>
+            </div>
+            {audio.mindmapData.editableNotes && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                <strong>Note:</strong> {audio.mindmapData.editableNotes}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tabs */}
       <Tabs defaultValue="mindmap" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -171,20 +227,60 @@ export default function MindmapViewerPage() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Brain className="w-5 h-5 text-primary" />
-                    Interactive Mindmap
+                    {isEnrichedMindmap ? "Editable Mindmap" : "Interactive Mindmap"}
                   </CardTitle>
                   <CardDescription>
-                    Click nodes to expand/collapse. Drag to pan, scroll to zoom.
+                    {isEnrichedMindmap
+                      ? "Switch between visual tree and JSON editor. Click nodes to edit."
+                      : "Click nodes to expand/collapse. Drag to pan, scroll to zoom."}
                   </CardDescription>
                 </div>
-                <Button variant="outline" size="sm" onClick={downloadMindmapJSON}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export JSON
-                </Button>
+                <div className="flex gap-2">
+                  {isEnrichedMindmap && (
+                    <div className="flex gap-1 bg-muted rounded-md p-0.5 mr-2">
+                      <Button
+                        variant={mindmapView === "visual" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setMindmapView("visual")}
+                        className="h-7 text-xs"
+                      >
+                        <TreePine className="w-3.5 h-3.5 mr-1" /> Visual
+                      </Button>
+                      <Button
+                        variant={mindmapView === "editable" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setMindmapView("editable")}
+                        className="h-7 text-xs"
+                      >
+                        <Download className="w-3.5 h-3.5 mr-1" /> Editable
+                      </Button>
+                    </div>
+                  )}
+                  <Button variant="outline" size="sm" onClick={downloadMindmapJSON}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export JSON
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              {audio.mindmapData && "root" in audio.mindmapData ? (
+              {isEnrichedMindmap ? (
+                mindmapView === "editable" ? (
+                  <div className="h-[700px]">
+                    <EditableMindmap
+                      data={audio.mindmapData as any}
+                      onChange={(updated) => {
+                        // In a real app, you'd save this back to the server
+                        console.log("Updated mindmap:", updated);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="h-[700px]">
+                    <MindmapTree data={getVisualMindmapData() as any} />
+                  </div>
+                )
+              ) : audio.mindmapData && "root" in audio.mindmapData ? (
                 <div className="h-[700px]">
                   <MindmapTree data={audio.mindmapData as any} />
                 </div>
