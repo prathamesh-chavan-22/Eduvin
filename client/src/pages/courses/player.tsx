@@ -11,6 +11,7 @@ import InlineTutorContent from "@/components/tutor/inline-tutor-content";
 import { useUpdateLearnerProfile } from "@/hooks/use-tutor";
 import MermaidDiagram from "@/components/mermaid-diagram";
 import { useToast } from "@/hooks/use-toast";
+import ExamPaperTab from "@/components/exam/ExamPaperTab";
 
 interface QuizQuestion {
   q: string;
@@ -42,6 +43,7 @@ export default function CoursePlayer() {
 
   const [activeModuleId, setActiveModuleId] = useState<number | null>(null);
   const [contentView, setContentView] = useState<"module" | "graph">("module");
+  const [activeTab, setActiveTab] = useState<"content" | "graph" | "exam">("content");
   const [showQuiz, setShowQuiz] = useState(false);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -296,6 +298,7 @@ export default function CoursePlayer() {
                     setActiveModuleId(m.id);
                     setShowQuiz(false);
                     resetQuiz();
+                    setActiveTab("content");
                     setContentView("module");
                   }}
                   className={`w-full text-left p-3 rounded-lg flex items-start gap-3 transition-all ${isActive
@@ -324,9 +327,10 @@ export default function CoursePlayer() {
                 <div className="px-8 lg:px-12 pt-6 pb-2 border-b border-border/50 flex items-center justify-between gap-3 bg-muted/20">
                   <div className="flex items-center gap-2">
                     <Button
-                      variant={contentView === "module" ? "default" : "outline"}
+                      variant={activeTab === "content" ? "default" : "outline"}
                       size="sm"
                       onClick={() => {
+                        setActiveTab("content");
                         setContentView("module");
                         setShowQuiz(false);
                       }}
@@ -334,15 +338,26 @@ export default function CoursePlayer() {
                       Module Content
                     </Button>
                     <Button
-                      variant={contentView === "graph" ? "default" : "outline"}
+                      variant={activeTab === "graph" ? "default" : "outline"}
                       size="sm"
                       onClick={() => {
+                        setActiveTab("graph");
                         setContentView("graph");
                         setShowQuiz(false);
                       }}
                     >
                       <Network className="w-4 h-4 mr-2" />
                       Course Graph
+                    </Button>
+                    <Button
+                      variant={activeTab === "exam" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setActiveTab("exam");
+                        setShowQuiz(false);
+                      }}
+                    >
+                      Exam Paper
                     </Button>
                   </div>
                   <div className="text-xs text-muted-foreground">
@@ -510,6 +525,10 @@ export default function CoursePlayer() {
                           : "No concept graph is available for this course yet."}
                       </div>
                     )}
+                  </div>
+                ) : activeTab === "exam" ? (
+                  <div className="p-8 lg:p-12 animate-in fade-in">
+                    <ExamPaperTab courseId={courseId} />
                   </div>
                 ) : (
                   <div className="p-8 lg:p-12 animate-in fade-in">
