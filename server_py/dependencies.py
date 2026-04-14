@@ -18,3 +18,17 @@ async def require_auth(user_id: Optional[int] = Depends(get_current_user_id)) ->
     if user_id is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user_id
+
+
+async def require_auth_with_role(
+    user_id: Optional[int] = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> tuple[int, str]:
+    """Returns (user_id, role). Raises 401 if not authenticated."""
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    from storage import get_user
+    user = await get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user_id, user.role
