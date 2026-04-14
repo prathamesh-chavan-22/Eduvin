@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlalchemy import select, update, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import User, Course, CourseModule, CourseConceptGraph, Enrollment, Notification, SpeakingPractice, SpeakingTopic, SpeakingLesson, UserLessonProgress, WorkflowAnalysis, AnalysisResult, LearnerProfile, TutorMessage
+from models import User, Course, CourseModule, CourseConceptGraph, Enrollment, Notification, SpeakingPractice, SpeakingTopic, SpeakingLesson, UserLessonProgress, WorkflowAnalysis, AnalysisResult, LearnerProfile, TutorMessage, ExamPaper, ExamAttempt
 
 
 # --- Users ---
@@ -862,4 +862,128 @@ async def search(db: AsyncSession, q: str) -> tuple[list[Course], list[User]]:
     )
     users = list(user_q.scalars().all())
     return courses, users
+
+
+# --- Exam Papers ---
+
+
+async def create_exam_paper(
+    db: AsyncSession,
+    course_id: int,
+    questions: list,
+    total_marks: int,
+    generated_by: int,
+) -> ExamPaper:
+    existing = await get_exam_paper_by_course(db, course_id)
+    if existing:
+        await db.delete(existing)
+        await db.flush()
+
+    paper = ExamPaper(
+        course_id=course_id,
+        questions=questions,
+        total_marks=total_marks,
+        generated_by=generated_by,
+    )
+    db.add(paper)
+    await db.commit()
+    await db.refresh(paper)
+    return paper
+
+
+async def get_exam_paper(db: AsyncSession, paper_id: int) -> ExamPaper | None:
+    result = await db.execute(select(ExamPaper).where(ExamPaper.id == paper_id))
+    return result.scalar_one_or_none()
+
+
+async def get_exam_paper_by_course(db: AsyncSession, course_id: int) -> ExamPaper | None:
+    result = await db.execute(select(ExamPaper).where(ExamPaper.course_id == course_id))
+    return result.scalar_one_or_none()
+
+
+async def delete_exam_paper(db: AsyncSession, paper_id: int) -> bool:
+    paper = await get_exam_paper(db, paper_id)
+    if not paper:
+        return False
+    await db.delete(paper)
+    await db.commit()
+    return True
+
+
+# --- Exam Attempts ---
+
+
+async def create_exam_attempt(
+    db: AsyncSession,
+    exam_paper_id: int,
+    user_id: int,
+    image_urls: list,
+) -> ExamAttempt:
+    existing = await get_exam_attempt_by_user_and_paper(db, user_id, exam_paper_id)
+    if existing:
+        await db.delete(existing)
+        await db.flush()
+
+    attempt = ExamAttempt(
+        exam_paper_id=exam_paper_id,
+        user_id=user_id,
+        image_urls=image_urls,
+    )
+    db.add(attempt)
+    await db.commit()
+    await db.refresh(attempt)
+    return attempt
+
+
+async def get_exam_attempt(db: AsyncSession, attempt_id: int) -> ExamAttempt | None:
+    result = await db.execute(select(ExamAttempt).where(ExamAttempt.id == attempt_id))
+    return result.scalar_one_or_none()
+
+
+async def get_exam_attempt_by_user_and_paper(
+    db: AsyncSession, user_id: int, exam_paper_id: int
+) -> ExamAttempt | None:
+    result = await db.execute(
+        select(ExamAttempt).where(
+            ExamAttempt.user_id == user_id,
+            ExamAttempt.exam_paper_id == exam_paper_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_exam_attempt_score(
+    db: AsyncSession,
+    attempt_id: int,
+    score: int,
+    total_marks: int,
+    evaluation_text: str,
+) -> ExamAttempt | None:
+    attempt = await get_exam_attempt(db, attempt_id)
+    if not attempt:
+        return None
+    attempt.score = score
+    attempt.total_marks = total_marks
+    attempt.evaluation_text = evaluation_text
+    await db.commit()
+    await db.refresh(attempt)
+    return attempt
+
+
+async def get_exam_attempts_for_paper(db: AsyncSession, exam_paper_id: int) -> List[ExamAttempt]:
+    result = await db.execute(
+        select(ExamAttempt)
+        .where(ExamAttempt.exam_paper_id == exam_paper_id)
+        .order_by(desc(ExamAttempt.submitted_at))
+    )
+    return list(result.scalars().all())
+
+
+async def get_exam_attempts_for_user(db: AsyncSession, user_id: int) -> List[ExamAttempt]:
+    result = await db.execute(
+        select(ExamAttempt)
+        .where(ExamAttempt.user_id == user_id)
+        .order_by(desc(ExamAttempt.submitted_at))
+    )
+    return list(result.scalars().all())
 
