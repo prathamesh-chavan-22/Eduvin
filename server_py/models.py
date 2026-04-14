@@ -267,3 +267,27 @@ class AudioUpload(Base):
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class ExamPaper(Base):
+    __tablename__ = "exam_papers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    course_id: Mapped[int] = mapped_column(Integer, ForeignKey("courses.id"), nullable=False, unique=True)
+    generated_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    questions: Mapped[list] = mapped_column(JSON, nullable=False)
+    total_marks: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
+
+
+class ExamAttempt(Base):
+    __tablename__ = "exam_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    exam_paper_id: Mapped[int] = mapped_column(Integer, ForeignKey("exam_papers.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    image_urls: Mapped[list] = mapped_column(JSON, nullable=False)
+    score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    total_marks: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    evaluation_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
