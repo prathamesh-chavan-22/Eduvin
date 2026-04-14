@@ -14,7 +14,7 @@ from session import create_session_table
 from seed import seed_database
 from models import Base
 
-from routers import auth, users, courses, enrollments, notifications, speaking, analysis, tutor, analytics, assessments, audio
+from routers import auth, users, courses, enrollments, notifications, speaking, analysis, tutor, analytics, assessments, audio, exam_papers
 
 
 @asynccontextmanager
@@ -65,6 +65,7 @@ app.include_router(tutor.router)
 app.include_router(analytics.router)
 app.include_router(assessments.router)
 app.include_router(audio.router)
+app.include_router(exam_papers.router)
 
 
 # Admin: reset + re-seed database
@@ -88,6 +89,11 @@ async def reset_db():
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/api/static", StaticFiles(directory=static_dir), name="static")
+
+# Static files for exam uploads
+exam_upload_dir = os.path.join(os.path.dirname(__file__), "static", "exam-uploads")
+os.makedirs(exam_upload_dir, exist_ok=True)
+app.mount("/api/exam-uploads", StaticFiles(directory=exam_upload_dir), name="exam-uploads")
 
 # Production: serve static files from dist/ (built by Vite)
 dist_dir = os.path.join(os.path.dirname(__file__), "..", "dist")
