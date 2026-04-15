@@ -32,6 +32,7 @@ export interface ExamAttempt {
   userId: number;
   score: number | null;
   totalMarks: number | null;
+  summary?: string | null;
   evaluationText: string | null;
   imageUrls: string[];
   submittedAt: string;

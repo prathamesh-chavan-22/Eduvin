@@ -193,11 +193,24 @@ async def upload_attempt(
         )
     except Exception as e:
         logger.error(f"Evaluation failed for attempt {attempt.id}: {e}")
+        err_text = str(e)
+        failure_summary = (
+            "Evaluation delayed due to AI rate limit (429). Please retry in a few minutes."
+            if "429" in err_text
+            else "Evaluation failed — please try again later."
+        )
+        await storage.update_exam_attempt_score(
+            db,
+            attempt_id=attempt.id,
+            score=None,
+            total_marks=paper.total_marks,
+            evaluation_text=failure_summary,
+        )
         return {
             "id": attempt.id,
             "score": None,
             "totalMarks": paper.total_marks,
-            "summary": "Evaluation failed — please try again later.",
+            "summary": failure_summary,
             "submittedAt": attempt.submitted_at.isoformat() if attempt.submitted_at else None,
         }
 

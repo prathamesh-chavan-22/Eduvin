@@ -955,9 +955,9 @@ async def get_exam_attempt_by_user_and_paper(
 async def update_exam_attempt_score(
     db: AsyncSession,
     attempt_id: int,
-    score: int,
-    total_marks: int,
-    evaluation_text: str,
+    score: int | None,
+    total_marks: int | None,
+    evaluation_text: str | None,
 ) -> ExamAttempt | None:
     attempt = await get_exam_attempt(db, attempt_id)
     if not attempt:

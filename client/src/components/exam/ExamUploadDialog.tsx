@@ -33,11 +33,12 @@ export default function ExamUploadDialog({ paperId, totalMarks, onClose }: Props
     }
     uploadMutation.mutate(files, {
       onSuccess: (data) => {
+        const summaryText = data.summary || data.evaluationText;
         toast({
           title: "Exam Submitted!",
           description: data.score !== null
-            ? `Score: ${data.score}/${data.totalMarks}`
-            : "Evaluation in progress...",
+            ? `Score: ${data.score}/${data.totalMarks}${summaryText ? ` · ${summaryText}` : ""}`
+            : (summaryText || "Evaluation in progress..."),
         });
         onClose();
       },

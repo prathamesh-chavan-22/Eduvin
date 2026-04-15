@@ -49,9 +49,48 @@ export default function ExamResultsView({ paperId }: Props) {
 
   const myAttempts = results.attempts.filter(a => a.userId === user?.id);
   const latestAttempt = myAttempts[0];
+  const previousAttempts = myAttempts.slice(1, 5);
 
-  if (!latestAttempt || latestAttempt.score === null) {
+  if (!latestAttempt) {
     return null;
+  }
+
+  if (latestAttempt.score === null) {
+    return (
+      <div className="mt-6">
+        <h4 className="font-semibold mb-2">Your Result</h4>
+        <Card className="p-6 text-center">
+          <p className="text-lg font-medium">Evaluation Pending</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            {latestAttempt.evaluationText || "Your submission is being processed. Please check again shortly."}
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Submitted: {new Date(latestAttempt.submittedAt).toLocaleString()}
+          </p>
+        </Card>
+
+        {previousAttempts.length > 0 && (
+          <div className="mt-4">
+            <h5 className="text-sm font-semibold mb-2">Previous Submissions</h5>
+            <div className="space-y-2">
+              {previousAttempts.map((a) => (
+                <Card key={a.id} className="p-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{new Date(a.submittedAt).toLocaleString()}</p>
+                    {a.evaluationText && <p className="text-xs text-muted-foreground mt-1">{a.evaluationText}</p>}
+                  </div>
+                  {a.score !== null && a.totalMarks !== null ? (
+                    <span className="text-sm font-semibold">{a.score}/{a.totalMarks}</span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Pending</span>
+                  )}
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
   const pct = Math.round((latestAttempt.score / (latestAttempt.totalMarks || 1)) * 100);
@@ -83,6 +122,27 @@ export default function ExamResultsView({ paperId }: Props) {
           Submitted: {new Date(latestAttempt.submittedAt).toLocaleString()}
         </p>
       </Card>
+
+      {previousAttempts.length > 0 && (
+        <div className="mt-4">
+          <h5 className="text-sm font-semibold mb-2">Previous Submissions</h5>
+          <div className="space-y-2">
+            {previousAttempts.map((a) => (
+              <Card key={a.id} className="p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">{new Date(a.submittedAt).toLocaleString()}</p>
+                  {a.evaluationText && <p className="text-xs text-muted-foreground mt-1">{a.evaluationText}</p>}
+                </div>
+                {a.score !== null && a.totalMarks !== null ? (
+                  <span className="text-sm font-semibold">{a.score}/{a.totalMarks}</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Pending</span>
+                )}
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
