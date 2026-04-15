@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(mkdir *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(timeout *)",
+      "Bash(true)",
+      "Bash(python *)",
+      "Bash(sleep *)",
+      "Bash(kill *)",
+      "Bash(wait *)",
+      "Bash(git commit *)",
+      "Bash(npx *)"
     ]
   },
   "$version": 3

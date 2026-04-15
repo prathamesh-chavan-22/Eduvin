@@ -5,9 +5,10 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 from collections import Counter
-from groq import Groq
+import httpx
+from json_repair import repair_json
 
-from config import GROQ_API_KEY
+from config import MISTRAL_API_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,12 @@ PARAGRAPH_BREAK = re.compile(r"\n\s*\n")
 SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
 NODE_TYPE_VALUES = {"root", "topic", "subtopic", "detail", "action_item", "decision"}
 OUTPUT_SCHEMA_VERSION = "2.0"
+MISTRAL_CHAT_API_URL = "https://api.mistral.ai/v1/chat/completions"
+MISTRAL_TRANSCRIBE_API_URL = "https://api.mistral.ai/v1/audio/transcriptions"
+MINDMAP_PRIMARY_MODEL = "mistral-small-latest"
+MINDMAP_FALLBACK_MODEL = "mistral-large-latest"
+MINDMAP_MODELS = [MINDMAP_PRIMARY_MODEL, MINDMAP_FALLBACK_MODEL]
+TRANSCRIPTION_MODEL = "voxtral-mini-latest"
 
 # ---------------------------------------------------------------------------
 # Transcript chunking helpers
@@ -461,44 +468,106 @@ Rules:
 Focus on important concepts, decisions, and action items. Avoid trivial details."""
 
 
-async def _generate_chunk_mindmap_llm(chunk_text: str, chunk_index: int) -> Dict[str, Any]:
-    """Call Groq LLM with streaming to produce an enriched mindmap for a single chunk."""
-    if not GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY is not configured")
+def _extract_json_payload(text: str) -> str:
+    """Extract JSON payload from plain text or markdown fenced output."""
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return ""
 
-    client = Groq(api_key=GROQ_API_KEY)
+    fence_match = re.search(r"```(?:json)?\s*(.*?)\s*```", cleaned, flags=re.DOTALL | re.IGNORECASE)
+    if fence_match:
+        return fence_match.group(1).strip()
 
-    user_prompt = f"Transcript segment {chunk_index}:\n\n{chunk_text}"
+    return cleaned
 
-    completion = client.chat.completions.create(
-        model="meta-llama/llama-4-scout-17b-16e-instruct",
-        messages=[
-            {
-                "role": "user",
-                "content": CHUNK_SYSTEM_PROMPT + "\n\n" + user_prompt,
-            },
-        ],
-        temperature=1,
-        max_completion_tokens=8192,
-        top_p=1,
-        stream=True,
-        stop=None,
-    )
 
-    # Accumulate streaming chunks into full response text
-    response_text = ""
-    for chunk in completion:
-        delta_content = chunk.choices[0].delta.content
-        if delta_content:
-            response_text += delta_content
+def _parse_llm_json_response(response_text: str, chunk_index: int) -> Dict[str, Any]:
+    """Parse JSON returned by LLM; attempt repair for malformed outputs."""
+    payload = _extract_json_payload(response_text)
+    if not payload:
+        raise ValueError(f"Empty response from LLM for chunk {chunk_index}")
 
     try:
-        raw = json.loads(response_text)
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse LLM mindmap JSON for chunk {chunk_index}: {e}")
-        raise
+        parsed = json.loads(payload)
+    except json.JSONDecodeError as parse_err:
+        logger.warning(
+            "Direct JSON parse failed for chunk %s (%s). Attempting JSON repair.",
+            chunk_index,
+            parse_err,
+        )
+        try:
+            repaired = repair_json(payload)
+            parsed = repaired if isinstance(repaired, dict) else json.loads(repaired)
+        except Exception as repair_err:
+            preview = payload[:200].replace("\n", " ")
+            logger.error(
+                "Failed to repair/parse LLM mindmap JSON for chunk %s: %s. Payload preview: %s",
+                chunk_index,
+                repair_err,
+                preview,
+            )
+            raise ValueError(f"Invalid JSON from LLM for chunk {chunk_index}") from repair_err
 
-    return _normalize_llm_mindmap(raw, source_chunk=chunk_index)
+    if not isinstance(parsed, dict):
+        raise ValueError(f"Expected JSON object from LLM for chunk {chunk_index}, got {type(parsed).__name__}")
+
+    return parsed
+
+
+async def _generate_chunk_mindmap_llm(chunk_text: str, chunk_index: int) -> Dict[str, Any]:
+    """Call Mistral chat completions API to produce an enriched mindmap for a single chunk."""
+    if not MISTRAL_API_KEY:
+        raise ValueError("MISTRAL_API_KEY is not configured")
+
+    user_prompt = f"Transcript segment {chunk_index}:\n\n{chunk_text}"
+    last_error: Optional[Exception] = None
+
+    for model_name in MINDMAP_MODELS:
+        try:
+            payload = {
+                "model": model_name,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": CHUNK_SYSTEM_PROMPT + "\n\n" + user_prompt,
+                    },
+                ],
+                "temperature": 0.5,
+                "response_format": {"type": "json_object"},
+            }
+            headers = {
+                "Authorization": f"Bearer {MISTRAL_API_KEY}",
+                "Content-Type": "application/json",
+            }
+
+            async with httpx.AsyncClient(timeout=90.0) as client:
+                resp = await client.post(MISTRAL_CHAT_API_URL, headers=headers, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                response_text = data["choices"][0]["message"]["content"]
+
+            raw = _parse_llm_json_response(response_text, chunk_index)
+
+            if model_name != MINDMAP_PRIMARY_MODEL:
+                logger.info(
+                    "Mindmap chunk %s generated with fallback model %s",
+                    chunk_index,
+                    model_name,
+                )
+
+            return _normalize_llm_mindmap(raw, source_chunk=chunk_index)
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                "Mindmap model %s failed for chunk %s: %s",
+                model_name,
+                chunk_index,
+                e,
+            )
+
+    raise ValueError(
+        f"All configured mindmap models failed for chunk {chunk_index}"
+    ) from last_error
 
 
 # ---------------------------------------------------------------------------
@@ -631,23 +700,27 @@ def generate_fallback_mindmap(transcript: str) -> Dict[str, Any]:
 
 def transcribe_audio(file_path: str) -> str:
     """
-    Transcribe an audio file using Groq's Whisper model.
+    Transcribe an audio file using Mistral transcription API.
     Returns the transcribed text.
     """
-    if not GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY is not configured")
+    if not MISTRAL_API_KEY:
+        raise ValueError("MISTRAL_API_KEY is not configured")
 
-    client = Groq(api_key=GROQ_API_KEY)
+    headers = {"Authorization": f"Bearer {MISTRAL_API_KEY}"}
 
     with open(file_path, "rb") as file:
-        transcription = client.audio.transcriptions.create(
-            file=(file_path, file.read()),
-            model="whisper-large-v3-turbo",
-            temperature=0,
-            response_format="verbose_json",
-        )
+        files = {"file": (os.path.basename(file_path), file, "application/octet-stream")}
+        data = {"model": TRANSCRIPTION_MODEL}
 
-    return transcription.text
+        with httpx.Client(timeout=180.0) as client:
+            resp = client.post(MISTRAL_TRANSCRIBE_API_URL, headers=headers, data=data, files=files)
+            resp.raise_for_status()
+            payload = resp.json()
+
+    transcript = payload.get("text") or payload.get("transcript") or ""
+    if not transcript:
+        raise ValueError("Mistral transcription response did not include transcript text")
+    return str(transcript)
 
 
 async def generate_mindmap_from_transcript(transcript: str) -> Dict[str, Any]:

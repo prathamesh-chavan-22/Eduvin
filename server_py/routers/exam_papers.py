@@ -123,11 +123,18 @@ async def download_pdf(
     course_data = await storage.get_course(db, paper.course_id)
     course_title = course_data["course"].title if course_data else "Exam Paper"
 
-    pdf_bytes = render_exam_paper_pdf(
-        course_title=course_title,
-        questions=paper.questions,
-        total_marks=paper.total_marks,
-    )
+    try:
+        pdf_bytes = render_exam_paper_pdf(
+            course_title=course_title,
+            questions=paper.questions,
+            total_marks=paper.total_marks,
+        )
+    except RuntimeError as e:
+        logger.error(f"PDF generation unavailable: {e}")
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"PDF generation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate PDF")
 
     temp_path = UPLOAD_DIR / f"exam_{paper_id}.pdf"
     with open(temp_path, "wb") as f:

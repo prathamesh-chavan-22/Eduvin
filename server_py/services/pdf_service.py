@@ -2,7 +2,6 @@ import os
 from datetime import datetime
 
 from jinja2 import Environment, FileSystemLoader
-from weasyprint import HTML
 
 
 def render_exam_paper_pdf(
@@ -10,6 +9,14 @@ def render_exam_paper_pdf(
     questions: list[dict],
     total_marks: int,
 ) -> bytes:
+    try:
+        from weasyprint import HTML
+    except Exception as exc:
+        raise RuntimeError(
+            "PDF generation dependencies are missing. Install WeasyPrint system libraries "
+            "(macOS/Homebrew: pango gdk-pixbuf libffi) and reinstall Python deps."
+        ) from exc
+
     template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template("exam_paper.html")
