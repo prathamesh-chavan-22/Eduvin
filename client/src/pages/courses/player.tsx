@@ -2,7 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useCourse, useCourseModules, useCourseConceptGraph, useRegenerateCourseConceptGraph } from "@/hooks/use-courses";
 import { useEnrollments, useUpdateProgress, useCreateEnrollment } from "@/hooks/use-enrollments";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, CheckCircle, ChevronRight, PlayCircle, Volume2, XCircle, Network } from "lucide-react";
@@ -12,6 +12,7 @@ import { useUpdateLearnerProfile } from "@/hooks/use-tutor";
 import MermaidDiagram from "@/components/mermaid-diagram";
 import { useToast } from "@/hooks/use-toast";
 import ExamPaperTab from "@/components/exam/ExamPaperTab";
+import AvatarNarrator from "@/components/avatar/AvatarNarrator";
 
 interface QuizQuestion {
   q: string;
@@ -50,6 +51,9 @@ export default function CoursePlayer() {
   const [answeredQuestions, setAnsweredQuestions] = useState<Map<number, number>>(new Map());
   const [showResult, setShowResult] = useState(false);
   const updateLearnerProfile = useUpdateLearnerProfile();
+
+  // Shared audio ref — passed to AvatarNarrator so it can read currentTime
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Find or auto-enroll
   const myEnrollment = enrollments.find(e => e.courseId === courseId && e.userId === user?.id);
@@ -542,24 +546,37 @@ export default function CoursePlayer() {
                       />
                     </div>
 
-                    {/* Audio Narration */}
+                    {/* Audio Narration + Avatar */}
                     {(activeModule as any).audioUrl && (
-                      <div className="mt-6 p-4 bg-muted/30 rounded-xl border border-border/50 flex items-center gap-3">
-                        <div className="shrink-0 w-9 h-9 bg-primary/10 rounded-full flex items-center justify-center">
-                          <Volume2 className="w-4 h-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium mb-1">Audio Narration</p>
-                          <audio
-                            controls
-                            className="w-full h-8"
-                            src={
-                              (activeModule as any).audioUrl.startsWith("/static")
-                                ? `/api${(activeModule as any).audioUrl}`
-                                : (activeModule as any).audioUrl
-                            }
-                            preload="none"
-                          />
+                      <div className="mt-6 p-4 bg-muted/30 rounded-xl border border-border/50">
+                        <div className="flex items-start gap-4">
+                          {/* Avatar */}
+                          <div className="shrink-0 w-24 h-24">
+                            <AvatarNarrator
+                              audioRef={audioRef}
+                              lipSyncUrl={(activeModule as any).lipSyncUrl ?? null}
+                            />
+                          </div>
+                          {/* Audio controls */}
+                          <div className="flex-1 min-w-0 pt-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                                <Volume2 className="w-3.5 h-3.5 text-primary" />
+                              </div>
+                              <p className="text-sm font-medium">Audio Narration</p>
+                            </div>
+                            <audio
+                              ref={audioRef}
+                              controls
+                              className="w-full h-8"
+                              src={
+                                (activeModule as any).audioUrl.startsWith("/static")
+                                  ? `/api${(activeModule as any).audioUrl}`
+                                  : (activeModule as any).audioUrl
+                              }
+                              preload="none"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}

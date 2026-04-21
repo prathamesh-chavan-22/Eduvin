@@ -299,6 +299,39 @@ Course
 
 ---
 
+## Speaking + Narration UX
+
+### Course Avatar Narrator
+
+Course narration now features a Duolingo-style SVG mascot that lip-syncs in real-time to module audio.
+
+**How it works:**
+- After each narration audio file is generated via Edge TTS, Rhubarb CLI produces a companion JSON timeline of mouth-cue (viseme) timing data.
+- The `AvatarNarrator` component fetches this timeline and uses a `requestAnimationFrame` loop to poll `audio.currentTime`, switching the avatar's SVG mouth shape to match the active phoneme.
+- A periodic blink animation runs independently at ~3.2 s intervals for a natural look.
+
+**Viseme shapes supported (Rhubarb output):**
+| Code | Phoneme group | Example |
+|------|--------------|---------|
+| A | M, B, P (closed) | "map" |
+| B | EE, small open | "see" |
+| C | E | "let" |
+| D | AI, wide open | "play" |
+| E | O, round | "go" |
+| F | W, Q, puckered | "wow" |
+| G | F, V | "five" |
+| H | L | "lily" |
+| X | Rest / silence | pause |
+
+**Fallback behaviour:**
+- If no `lipSyncUrl` is present on a module (e.g. older content), the avatar stays in idle/rest state (mouth shape X) and audio still plays normally.
+- If the timeline fetch fails or the JSON is malformed, the avatar silently falls back to idle — no error is surfaced to the learner.
+
+**Prerequisites:**
+- `rhubarb` CLI must be installed and available on `PATH` for new courses to generate lip-sync data. See [README.md](../README.md) for setup instructions.
+
+---
+
 ## Speaking Practice
 
 ### Pronunciation Training
