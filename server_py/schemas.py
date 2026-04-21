@@ -48,6 +48,7 @@ class CourseModuleOut(CamelModel):
     sort_order: int
     quiz: Optional[str] = None
     audio_url: Optional[str] = None
+    lip_sync_url: Optional[str] = None
     images: Optional[List[str]] = None
 
 

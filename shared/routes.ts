@@ -94,7 +94,19 @@ export const api = {
       method: "GET" as const,
       path: "/api/courses/:id/modules" as const,
       responses: {
-        200: z.array(z.custom<typeof courseModules.$inferSelect>()),
+        200: z.array(
+          z.object({
+            id: z.number(),
+            courseId: z.number().nullable().optional(),
+            title: z.string(),
+            content: z.string(),
+            sortOrder: z.number(),
+            quiz: z.string().nullable().optional(),
+            audioUrl: z.string().nullable().optional(),
+            lipSyncUrl: z.string().nullable().optional(),
+            images: z.array(z.string()).nullable().optional(),
+          })
+        ),
       },
     },
     getConceptGraph: {

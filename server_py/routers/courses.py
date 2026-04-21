@@ -13,8 +13,16 @@ from schemas import (
 import storage
 from services.mistral_ai import generate_course_outline, generate_chapter_content, generate_course_concept_graph
 from services.edge_tts_service import generate_audio
+from services.lip_sync_service import derive_lipsync_url, generate_lipsync_json
 
 logger = logging.getLogger(__name__)
+
+
+def module_to_out(module) -> dict:
+    """Serialize a module ORM object, injecting the derived lipSyncUrl."""
+    data = CourseModuleOut.model_validate(module).model_dump(by_alias=True)
+    data["lipSyncUrl"] = derive_lipsync_url(data.get("audioUrl"))
+    return data
 
 router = APIRouter(prefix="/api/courses", tags=["courses"])
 
@@ -101,6 +109,15 @@ async def _generate_course_pipeline(course_id: int, title: str, audience: str, d
                     filename = f"course_{course_id}_module_{mod_id}.mp3"
                     audio_url = await generate_audio(script, filename)
                     await storage.update_module_audio(db, mod_id, audio_url)
+
+                    # Generate lip-sync timeline JSON alongside the audio
+                    audio_path = f"server_py/static/audio/{filename}"
+                    timeline_path = f"server_py/static/audio/{filename[:-4]}.json"
+                    try:
+                        generate_lipsync_json(audio_path=audio_path, output_path=timeline_path)
+                    except Exception as lse:
+                        logger.warning(f"Lip-sync generation failed for module {mod_id}: {lse}")
+                        # Non-fatal: avatar falls back to idle state
                 except Exception as e:
                     logger.warning(f"Audio generation failed for module {mod_id}: {e}")
                     # Continue - audio is optional
@@ -290,7 +307,7 @@ async def get_course(course_id: int, db: AsyncSession = Depends(get_db)):
 
     c = data["course"]
     result = CourseDetailOut.model_validate(c).model_dump(by_alias=True)
-    result["modules"] = [CourseModuleOut.model_validate(m).model_dump(by_alias=True) for m in data["modules"]]
+    result["modules"] = [module_to_out(m) for m in data["modules"]]
     if data["creator"]:
         from schemas import UserOut
         result["creator"] = UserOut.model_validate(data["creator"]).model_dump(by_alias=True)
@@ -302,7 +319,7 @@ async def get_course(course_id: int, db: AsyncSession = Depends(get_db)):
 @router.get("/{course_id}/modules")
 async def list_modules(course_id: int, db: AsyncSession = Depends(get_db)):
     modules = await storage.get_course_modules(db, course_id)
-    return [CourseModuleOut.model_validate(m).model_dump(by_alias=True) for m in modules]
+    return [module_to_out(m) for m in modules]
 
 
 @router.get("/{course_id}/concept-graph")
@@ -373,7 +390,7 @@ async def publish_course(course_id: int, db: AsyncSession = Depends(get_db)):
     refreshed = await storage.get_course(db, course_id)
     c = refreshed["course"]
     result = CourseDetailOut.model_validate(c).model_dump(by_alias=True)
-    result["modules"] = [CourseModuleOut.model_validate(m).model_dump(by_alias=True) for m in refreshed["modules"]]
+    result["modules"] = [module_to_out(m) for m in refreshed["modules"]]
     return result
 
 
@@ -383,5 +400,5 @@ async def create_module(course_id: int, body: CreateModule, db: AsyncSession = D
         db, course_id=course_id, title=body.title,
         content=body.content, sort_order=body.sort_order, quiz=body.quiz,
     )
-    return CourseModuleOut.model_validate(module).model_dump(by_alias=True)
+    return module_to_out(module)
 
