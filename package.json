@@ -7,7 +7,9 @@
     "dev": "npx vite --host 0.0.0.0 --port 5173",
     "dev:api": "cd server_py && python -m uvicorn main:app --reload --host 0.0.0.0 --port 5000",
     "build": "tsx script/build.ts",
-    "check": "tsc"
+    "check": "tsc",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -69,6 +71,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@replit/vite-plugin-cartographer": "^0.4.4",
     "@replit/vite-plugin-dev-banner": "^0.1.1",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",

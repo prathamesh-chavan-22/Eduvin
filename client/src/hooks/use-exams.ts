@@ -13,10 +13,13 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export interface ExamQuestion {
-  type: "essay" | "short" | "long" | "definition";
+  type: "essay" | "short" | "long" | "definition" | "mcq";
   question: string;
   marks: number;
   rubric: string;
+  bloomLevel?: "remember" | "understand" | "apply" | "analyze" | "evaluate" | "create";
+  options?: string[];
+  answer?: string | number;
 }
 
 export interface ExamPaper {
@@ -25,6 +28,11 @@ export interface ExamPaper {
   questions: ExamQuestion[];
   totalMarks: number;
   createdAt: string;
+  bloomsDistribution?: Record<string, number> | null;
+  questionFormat?: "mixed" | "objective" | "subjective";
+  liveEnabled?: boolean;
+  liveDurationMinutes?: number;
+  notifyUserIds?: number[];
 }
 
 export interface ExamAttempt {
@@ -43,12 +51,57 @@ export interface ExamResults {
   attempts: ExamAttempt[];
 }
 
+export interface ExamGenerationInput {
+  questionCount: number;
+  bloomsDistribution: Record<string, number>;
+  questionFormat: "mixed" | "objective" | "subjective";
+  liveEnabled: boolean;
+  liveDurationMinutes: number;
+  notifyUserIds: number[];
+}
+
+export interface LiveExamStart {
+  paperId: number;
+  durationMinutes: number;
+  questions: ExamQuestion[];
+  startedBy: number;
+}
+
+export interface LiveExamSubmission {
+  id: number;
+  score: number;
+  totalMarks: number;
+  summary: string;
+  correctAnswers: number;
+  autoGradedQuestions: number;
+  submittedAt: string;
+}
+
+function normalizePaper(raw: any): ExamPaper {
+  const questions = Array.isArray(raw?.questions)
+    ? raw.questions.map((q: any) => ({
+        ...q,
+        bloomLevel: q?.bloomLevel ?? q?.bloom_level ?? undefined,
+      }))
+    : [];
+  return {
+    ...raw,
+    questions,
+    bloomsDistribution: raw?.bloomsDistribution ?? raw?.blooms_distribution ?? null,
+    questionFormat: raw?.questionFormat ?? raw?.question_format ?? "mixed",
+    liveEnabled: Boolean(raw?.liveEnabled ?? raw?.live_enabled ?? false),
+    liveDurationMinutes: raw?.liveDurationMinutes ?? raw?.live_duration_minutes ?? 30,
+    notifyUserIds: raw?.notifyUserIds ?? raw?.notify_user_ids ?? [],
+  };
+}
+
 export function useExamPaper(courseId: number) {
   return useQuery<ExamPaper | null>({
     queryKey: ["exam-paper", courseId],
     queryFn: async () => {
       try {
-        return await apiFetch<ExamPaper>(`/api/exam-papers/by-course/${courseId}`);
+        const raw = await apiFetch<any>(`/api/exam-papers/by-course/${courseId}`);
+        return normalizePaper(raw);
       } catch {
         return null;
       }
@@ -60,15 +113,20 @@ export function useExamPaper(courseId: number) {
 export function useExamPaperById(paperId: number) {
   return useQuery<ExamPaper>({
     queryKey: ["exam-paper-by-id", paperId],
-    queryFn: () => apiFetch<ExamPaper>(`/api/exam-papers/${paperId}`),
+    queryFn: async () => normalizePaper(await apiFetch<any>(`/api/exam-papers/${paperId}`)),
     enabled: !!paperId,
   });
 }
 
 export function useGenerateExamPaper(courseId: number) {
   const queryClient = useQueryClient();
-  return useMutation<ExamPaper, Error>({
-    mutationFn: () => apiFetch<ExamPaper>(`/api/exam-papers/generate/${courseId}`, { method: "POST" }),
+  return useMutation<ExamPaper, Error, ExamGenerationInput>({
+    mutationFn: (payload) =>
+      apiFetch<any>(`/api/exam-papers/generate/${courseId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(normalizePaper),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exam-paper", courseId] });
     },
@@ -105,5 +163,27 @@ export function useExamResults(paperId: number) {
     queryKey: ["exam-results", paperId],
     queryFn: () => apiFetch<ExamResults>(`/api/exam-papers/${paperId}/results`),
     enabled: !!paperId,
+  });
+}
+
+export function useStartLiveExam(paperId: number) {
+  return useMutation<LiveExamStart, Error>({
+    mutationFn: () => apiFetch<LiveExamStart>(`/api/exam-papers/${paperId}/live/start`, { method: "POST" }),
+  });
+}
+
+export function useSubmitLiveExam(paperId: number) {
+  const queryClient = useQueryClient();
+  return useMutation<LiveExamSubmission, Error, (string | number | null)[]>({
+    mutationFn: (answers) =>
+      apiFetch<LiveExamSubmission>(`/api/exam-papers/${paperId}/live/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exam-results", paperId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
   });
 }

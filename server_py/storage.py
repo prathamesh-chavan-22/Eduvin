@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlalchemy import select, update, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import User, Course, CourseModule, CourseConceptGraph, Enrollment, Notification, SpeakingPractice, SpeakingTopic, SpeakingLesson, UserLessonProgress, WorkflowAnalysis, AnalysisResult, LearnerProfile, TutorMessage, ExamPaper, ExamAttempt
+from models import User, Course, CourseModule, CourseConceptGraph, Enrollment, Notification, SpeakingPractice, SpeakingTopic, SpeakingLesson, UserLessonProgress, WorkflowAnalysis, AnalysisResult, LearnerProfile, TutorMessage, ExamPaper, ExamPaperConfig, ExamAttempt
 
 
 # --- Users ---
@@ -891,6 +891,48 @@ async def create_exam_paper(
     return paper
 
 
+async def upsert_exam_paper_config(
+    db: AsyncSession,
+    exam_paper_id: int,
+    *,
+    blooms_distribution: dict | None = None,
+    question_format: str = "mixed",
+    notify_user_ids: list[int] | None = None,
+    live_enabled: bool = False,
+    live_duration_minutes: int = 30,
+) -> ExamPaperConfig:
+    result = await db.execute(
+        select(ExamPaperConfig).where(ExamPaperConfig.exam_paper_id == exam_paper_id)
+    )
+    config = result.scalar_one_or_none()
+    if config is None:
+        config = ExamPaperConfig(
+            exam_paper_id=exam_paper_id,
+            blooms_distribution=blooms_distribution,
+            question_format=question_format,
+            notify_user_ids=notify_user_ids,
+            live_enabled=live_enabled,
+            live_duration_minutes=live_duration_minutes,
+        )
+        db.add(config)
+    else:
+        config.blooms_distribution = blooms_distribution
+        config.question_format = question_format
+        config.notify_user_ids = notify_user_ids
+        config.live_enabled = live_enabled
+        config.live_duration_minutes = live_duration_minutes
+    await db.commit()
+    await db.refresh(config)
+    return config
+
+
+async def get_exam_paper_config(db: AsyncSession, exam_paper_id: int) -> ExamPaperConfig | None:
+    result = await db.execute(
+        select(ExamPaperConfig).where(ExamPaperConfig.exam_paper_id == exam_paper_id)
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_exam_paper(db: AsyncSession, paper_id: int) -> ExamPaper | None:
     result = await db.execute(select(ExamPaper).where(ExamPaper.id == paper_id))
     return result.scalar_one_or_none()
@@ -919,11 +961,6 @@ async def create_exam_attempt(
     user_id: int,
     image_urls: list,
 ) -> ExamAttempt:
-    existing = await get_exam_attempt_by_user_and_paper(db, user_id, exam_paper_id)
-    if existing:
-        await db.delete(existing)
-        await db.flush()
-
     attempt = ExamAttempt(
         exam_paper_id=exam_paper_id,
         user_id=user_id,
@@ -947,9 +984,23 @@ async def get_exam_attempt_by_user_and_paper(
         select(ExamAttempt).where(
             ExamAttempt.user_id == user_id,
             ExamAttempt.exam_paper_id == exam_paper_id,
-        )
+        ).order_by(desc(ExamAttempt.submitted_at))
     )
     return result.scalar_one_or_none()
+
+
+async def get_exam_attempts_by_user_and_paper(
+    db: AsyncSession, user_id: int, exam_paper_id: int
+) -> List[ExamAttempt]:
+    result = await db.execute(
+        select(ExamAttempt)
+        .where(
+            ExamAttempt.user_id == user_id,
+            ExamAttempt.exam_paper_id == exam_paper_id,
+        )
+        .order_by(desc(ExamAttempt.submitted_at))
+    )
+    return list(result.scalars().all())
 
 
 async def update_exam_attempt_score(
@@ -986,4 +1037,3 @@ async def get_exam_attempts_for_user(db: AsyncSession, user_id: int) -> List[Exa
         .order_by(desc(ExamAttempt.submitted_at))
     )
     return list(result.scalars().all())
-

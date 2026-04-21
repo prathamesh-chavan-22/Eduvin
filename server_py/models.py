@@ -280,6 +280,27 @@ class ExamPaper(Base):
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
 
 
+class ExamPaperConfig(Base):
+    __tablename__ = "exam_paper_configs"
+    __table_args__ = (
+        Index("idx_exam_paper_configs_paper", "exam_paper_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    exam_paper_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("exam_papers.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    blooms_distribution: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    question_format: Mapped[str] = mapped_column(Text, nullable=False, server_default="mixed")
+    notify_user_ids: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    live_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    live_duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="30")
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
+
+
 class ExamAttempt(Base):
     __tablename__ = "exam_attempts"
 

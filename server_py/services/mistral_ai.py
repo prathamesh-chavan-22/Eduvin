@@ -39,6 +39,38 @@ async def _call_mistral(messages: list[dict], temperature: float = 0.3, timeout:
             return data["choices"][0]["message"]["content"]
 
 
+def _parse_json_object_response(raw: str) -> dict[str, Any]:
+    text = (raw or "").strip()
+    decoder = json.JSONDecoder()
+
+    def _decode(candidate: str) -> dict[str, Any]:
+        parsed, _ = decoder.raw_decode(candidate)
+        if not isinstance(parsed, dict):
+            raise ValueError("Mistral response is not a JSON object")
+        return parsed
+
+    try:
+        return _decode(text)
+    except Exception:
+        pass
+
+    fenced_match = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, flags=re.DOTALL)
+    if fenced_match:
+        try:
+            return _decode(fenced_match.group(1).strip())
+        except Exception:
+            pass
+
+    first_brace = text.find("{")
+    if first_brace != -1:
+        try:
+            return _decode(text[first_brace:])
+        except Exception:
+            pass
+
+    raise ValueError(f"Unable to parse JSON object from Mistral response: {text[:200]}")
+
+
 def _web_search(query: str, max_results: int = 3) -> str:
     """Fetch latest data from the web using DuckDuckGo search."""
     try:
@@ -75,7 +107,7 @@ async def detect_csv_columns(headers: list[str], sample_rows: list[list[str]]) -
     ]
 
     raw = await _call_mistral(messages)
-    return json.loads(raw)
+    return _parse_json_object_response(raw)
 
 
 async def analyze_remarks(
@@ -117,7 +149,7 @@ async def analyze_remarks(
     ]
 
     raw = await _call_mistral(messages)
-    result = json.loads(raw)
+    result = _parse_json_object_response(raw)
 
     return {
         "summary": result.get("summary", ""),
@@ -153,7 +185,7 @@ async def generate_course_outline(title: str, audience: str = "all", depth: str 
     ]
 
     raw = await _call_mistral(messages, temperature=0.4, timeout=120.0)
-    return json.loads(raw)
+    return _parse_json_object_response(raw)
 
 
 async def generate_chapter_content(
@@ -196,7 +228,7 @@ async def generate_chapter_content(
     ]
 
     raw = await _call_mistral(messages, temperature=0.5, timeout=120.0)
-    return json.loads(raw)
+    return _parse_json_object_response(raw)
 
 
 async def analyze_speaking_transcript(prompt: str, transcript: str, language: str = "en",
@@ -248,7 +280,7 @@ async def analyze_speaking_transcript(prompt: str, transcript: str, language: st
         },
     ]
     raw = await _call_mistral(messages, temperature=0.3, timeout=60.0)
-    result = json.loads(raw)
+    result = _parse_json_object_response(raw)
     return {
         "pronunciation_score": float(result.get("pronunciation_score", 75.0)),
         "fluency_score": float(result.get("fluency_score", 75.0)),
@@ -408,7 +440,7 @@ async def generate_course_concept_graph(
 
     try:
         raw = await _call_mistral(messages, temperature=0.2, timeout=90.0)
-        payload = json.loads(raw)
+        payload = _parse_json_object_response(raw)
     except Exception as e:
         logger.warning("Concept graph generation failed, using fallback: %s", e)
         return {
@@ -419,4 +451,3 @@ async def generate_course_concept_graph(
         }
 
     return _sanitize_concept_graph(payload, course_title, modules)
-

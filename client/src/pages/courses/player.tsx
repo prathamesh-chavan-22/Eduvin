@@ -536,50 +536,55 @@ export default function CoursePlayer() {
                   </div>
                 ) : (
                   <div className="p-8 lg:p-12 animate-in fade-in">
-                    <h2 className="text-3xl font-display font-bold mb-6">{activeModule.title}</h2>
-                    <div className="mb-8">
-                      <InlineTutorContent
-                        courseId={courseId}
-                        moduleId={activeModuleId || modules[0]?.id || 0}
-                        moduleTitle={activeModule.title}
-                        content={activeModule.content}
-                      />
-                    </div>
-
-                    {/* Audio Narration + Avatar */}
-                    {(activeModule as any).audioUrl && (
-                      <div className="mt-6 p-4 bg-muted/30 rounded-xl border border-border/50">
-                        <div className="flex items-start gap-4">
-                          {/* Avatar */}
-                          <div className="shrink-0 w-24 h-24">
-                            <AvatarNarrator
-                              audioRef={audioRef}
-                              audioUrl={(activeModule as any).audioUrl}
-                            />
-                          </div>
-                          {/* Audio controls */}
-                          <div className="flex-1 min-w-0 pt-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-                                <Volume2 className="w-3.5 h-3.5 text-primary" />
-                              </div>
-                              <p className="text-sm font-medium">Audio Narration</p>
-                            </div>
-                            <audio
-                              ref={audioRef}
-                              controls
-                              className="w-full h-8"
-                              src={
-                                (activeModule as any).audioUrl.startsWith("/static")
-                                  ? `/api${(activeModule as any).audioUrl}`
-                                  : (activeModule as any).audioUrl
-                              }
-                              preload="none"
-                            />
-                          </div>
+                    <div className="grid grid-cols-1 md:grid-cols-[7rem,1fr] gap-6 md:gap-8 items-start">
+                      <div className="md:sticky md:top-24 flex flex-col items-center gap-2">
+                        <div className="shrink-0 w-24 h-24 rounded-2xl bg-muted/30 border border-border/50 p-1.5">
+                          <AvatarNarrator
+                            audioRef={audioRef}
+                            audioUrl={(activeModule as any).audioUrl}
+                          />
                         </div>
+                        <p className="text-[11px] text-muted-foreground text-center">AI Mascot</p>
                       </div>
-                    )}
+
+                      <div>
+                        <h2 className="text-3xl font-display font-bold mb-6">{activeModule.title}</h2>
+                        <div className="mb-8">
+                          <InlineTutorContent
+                            courseId={courseId}
+                            moduleId={activeModuleId || modules[0]?.id || 0}
+                            moduleTitle={activeModule.title}
+                            content={activeModule.content}
+                          />
+                        </div>
+
+                        {(activeModule as any).audioUrl && (
+                          <div className="mt-6 p-4 bg-muted/30 rounded-xl border border-border/50">
+                            <div className="flex items-start gap-4">
+                              <div className="flex-1 min-w-0 pt-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                                    <Volume2 className="w-3.5 h-3.5 text-primary" />
+                                  </div>
+                                  <p className="text-sm font-medium">Audio Narration</p>
+                                </div>
+                                <audio
+                                  ref={audioRef}
+                                  controls
+                                  className="w-full h-8"
+                                  src={
+                                    (activeModule as any).audioUrl.startsWith("/static")
+                                      ? `/api${(activeModule as any).audioUrl}`
+                                      : (activeModule as any).audioUrl
+                                  }
+                                  preload="none"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 

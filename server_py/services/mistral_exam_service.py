@@ -3,6 +3,7 @@ import logging
 import base64
 import asyncio
 import re
+import math
 from pathlib import Path
 from typing import Optional
 
@@ -17,6 +18,110 @@ MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions"
 PIXTRAL_MODEL = "pixtral-large-2411"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+BLOOM_LEVELS = ("remember", "understand", "apply", "analyze", "evaluate", "create")
+
+
+def normalize_blooms_distribution(
+    requested_distribution: Optional[dict[str, int]],
+    question_count: int,
+) -> dict[str, int]:
+    if question_count <= 0:
+        raise ValueError("question_count must be greater than 0")
+
+    sanitized: dict[str, int] = {}
+    if requested_distribution:
+        for level in BLOOM_LEVELS:
+            raw_value = requested_distribution.get(level, 0)
+            try:
+                value = int(raw_value)
+            except (TypeError, ValueError):
+                value = 0
+            sanitized[level] = max(0, value)
+    else:
+        sanitized = {level: 1 for level in BLOOM_LEVELS}
+
+    if sum(sanitized.values()) == 0:
+        sanitized = {level: 1 for level in BLOOM_LEVELS}
+
+    total_weight = sum(sanitized.values())
+    raw_allocations = {
+        level: (sanitized[level] / total_weight) * question_count
+        for level in BLOOM_LEVELS
+    }
+    base_allocations = {
+        level: int(math.floor(raw_allocations[level]))
+        for level in BLOOM_LEVELS
+    }
+
+    allocated = sum(base_allocations.values())
+    remaining = question_count - allocated
+    if remaining > 0:
+        remainder_order = sorted(
+            BLOOM_LEVELS,
+            key=lambda level: raw_allocations[level] - base_allocations[level],
+            reverse=True,
+        )
+        idx = 0
+        while remaining > 0:
+            level = remainder_order[idx % len(remainder_order)]
+            base_allocations[level] += 1
+            remaining -= 1
+            idx += 1
+
+    return base_allocations
+
+
+def score_live_exam_answers(questions: list[dict], answers: list) -> dict:
+    def _normalize_answer(value):
+        if isinstance(value, str):
+            return value.strip().lower()
+        return value
+
+    total_marks = sum(max(1, int(q.get("marks", 1) or 1)) for q in questions)
+    score = 0
+    correct_answers = 0
+    auto_graded_questions = 0
+
+    for idx, question in enumerate(questions):
+        expected = question.get("answer")
+        if expected is None:
+            continue
+
+        auto_graded_questions += 1
+        submitted = answers[idx] if idx < len(answers) else None
+        marks = max(1, int(question.get("marks", 1) or 1))
+
+        expected_normalized = _normalize_answer(expected)
+        submitted_normalized = _normalize_answer(submitted)
+        if submitted_normalized == expected_normalized:
+            score += marks
+            correct_answers += 1
+
+    if auto_graded_questions == 0:
+        summary = "No auto-gradable questions found. Submission recorded for manual review."
+    else:
+        summary = (
+            f"Auto-graded {auto_graded_questions} questions. "
+            f"Correct: {correct_answers}."
+        )
+
+    return {
+        "score": score,
+        "total_marks": total_marks,
+        "correct_answers": correct_answers,
+        "auto_graded_questions": auto_graded_questions,
+        "summary": summary,
+    }
+
+
+def sanitize_questions_for_live_exam(questions: list[dict]) -> list[dict]:
+    sanitized = []
+    for q in questions:
+        item = dict(q)
+        item.pop("answer", None)
+        item.pop("answer_key", None)
+        sanitized.append(item)
+    return sanitized
 
 
 def _coerce_message_content(raw: object) -> str:
@@ -79,7 +184,24 @@ def _parse_json_object(raw: str) -> dict:
     raise ValueError("Model response did not contain a valid JSON object")
 
 
-async def generate_exam_paper(course_title: str, objectives: Optional[list[str]], modules: list[dict]) -> dict:
+async def generate_exam_paper(
+    course_title: str,
+    objectives: Optional[list[str]],
+    modules: list[dict],
+    *,
+    question_count: int = 10,
+    blooms_distribution: Optional[dict[str, int]] = None,
+    question_format: str = "mixed",
+) -> dict:
+    if question_count <= 0:
+        raise ValueError("question_count must be greater than 0")
+    if question_format not in {"mixed", "objective", "subjective"}:
+        raise ValueError("question_format must be one of: mixed, objective, subjective")
+
+    normalized_distribution = normalize_blooms_distribution(
+        blooms_distribution,
+        question_count=question_count,
+    )
     module_content = []
     for idx, mod in enumerate(modules, 1):
         module_content.append(
@@ -93,15 +215,18 @@ async def generate_exam_paper(course_title: str, objectives: Optional[list[str]]
             "role": "system",
             "content": (
                 "You are an expert exam paper designer. Based on the following course content, create a "
-                "traditional exam paper with a mix of question types.\n\n"
+                "traditional exam paper with Bloom's taxonomy aligned questions.\n\n"
                 "Requirements:\n"
+                f"- Generate exactly {question_count} questions\n"
+                f"- Use this question format: {question_format}\n"
                 "- Mix of question types: essay (10-15 marks), short answer (5 marks), "
-                "long answer (8-12 marks), definition (2-3 marks)\n"
-                "- Total marks: 50-70\n"
+                "long answer (8-12 marks), definition (2-3 marks), MCQ (2-5 marks)\n"
+                "- Tag each question with bloom_level from: remember, understand, apply, analyze, evaluate, create\n"
+                "- If question format is objective or mixed, include options[] and answer for objective/MCQ items\n"
                 "- Cover all modules proportionally\n"
                 "- Include a rubric for each question describing what a good answer includes\n\n"
                 "Return ONLY valid JSON in this format:\n"
-                '{\n  "questions": [\n    {\n      "type": "essay|short|long|definition",\n      "question": "...",\n      "marks": 10,\n      "rubric": "..."\n    }\n  ],\n  "total_marks": 60\n}'
+                '{\n  "questions": [\n    {\n      "type": "essay|short|long|definition|mcq",\n      "bloom_level": "remember|understand|apply|analyze|evaluate|create",\n      "question": "...",\n      "marks": 10,\n      "rubric": "...",\n      "options": ["A","B","C","D"],\n      "answer": "B"\n    }\n  ],\n  "total_marks": 60\n}'
             ),
         },
         {
@@ -109,6 +234,7 @@ async def generate_exam_paper(course_title: str, objectives: Optional[list[str]]
             "content": (
                 f"Course: {course_title}\n"
                 f"Objectives:\n{objectives_str}\n"
+                f"Bloom Distribution Target: {json.dumps(normalized_distribution)}\n"
                 f"Module Content:\n{content_str}"
             ),
         },
@@ -129,12 +255,43 @@ async def generate_exam_paper(course_title: str, objectives: Optional[list[str]]
             resp.raise_for_status()
             data = resp.json()
             raw = data["choices"][0]["message"]["content"]
-            result = json.loads(raw)
+            result = _parse_json_object(raw)
 
             if "questions" not in result or "total_marks" not in result:
                 raise ValueError("Invalid response structure")
 
-            return result
+            questions = result.get("questions", [])
+            if not isinstance(questions, list) or not questions:
+                raise ValueError("No questions generated")
+
+            trimmed_questions = questions[:question_count]
+            for idx, question in enumerate(trimmed_questions):
+                if not isinstance(question, dict):
+                    raise ValueError("Question format invalid")
+                question.setdefault("type", "short")
+                question.setdefault("question", f"Question {idx + 1}")
+                question["marks"] = max(1, int(question.get("marks", 1) or 1))
+                question.setdefault("rubric", "Answer covers key concepts accurately.")
+                bloom_level = str(question.get("bloom_level", "")).strip().lower()
+                if bloom_level not in BLOOM_LEVELS:
+                    fallback = [lvl for lvl, count in normalized_distribution.items() if count > 0]
+                    question["bloom_level"] = fallback[idx % len(fallback)] if fallback else "understand"
+                else:
+                    question["bloom_level"] = bloom_level
+
+                if question.get("type") == "mcq":
+                    options = question.get("options")
+                    if not isinstance(options, list) or len(options) < 2:
+                        question["options"] = ["Option A", "Option B", "Option C", "Option D"]
+                    if "answer" not in question:
+                        question["answer"] = question["options"][0]
+
+            return {
+                "questions": trimmed_questions,
+                "total_marks": sum(int(q.get("marks", 1)) for q in trimmed_questions),
+                "blooms_distribution": normalized_distribution,
+                "question_format": question_format,
+            }
     except Exception as e:
         logger.error(f"Exam paper generation failed: {e}")
         raise Exception(f"Failed to generate exam paper: {str(e)}")
