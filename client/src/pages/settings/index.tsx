@@ -180,7 +180,7 @@ export default function Settings() {
                     <Card className="border-border/50 shadow-md">
                         <CardHeader>
                             <CardTitle>Language & Region</CardTitle>
-                            <CardDescription>Set your preferred language for the EduVin AI interface and courses.</CardDescription>
+                            <CardDescription>Set your preferred language for the LMS AI interface and courses.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6 max-w-md">
                             <div className="space-y-2">

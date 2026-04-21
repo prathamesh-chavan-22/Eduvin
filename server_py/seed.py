@@ -30,23 +30,23 @@ async def seed_database(db: AsyncSession):
 
     # --- Users ---
     l_and_d = await storage.create_user(
-        db, email="admin@eduvin.local", password="password",
+        db, email="admin@lms.local", password="password",
         full_name="Admin User", role="l_and_d",
     )
     manager = await storage.create_user(
-        db, email="manager@eduvin.local", password="password",
+        db, email="manager@lms.local", password="password",
         full_name="Manager User", role="manager",
     )
     emp1 = await storage.create_user(
-        db, email="employee@eduvin.local", password="password",
+        db, email="employee@lms.local", password="password",
         full_name="John Employee", role="employee",
     )
     emp2 = await storage.create_user(
-        db, email="jane.doe@eduvin.local", password="password",
+        db, email="jane.doe@lms.local", password="password",
         full_name="Jane Doe", role="employee",
     )
     emp3 = await storage.create_user(
-        db, email="alex.kumar@eduvin.local", password="password",
+        db, email="alex.kumar@lms.local", password="password",
         full_name="Alex Kumar", role="employee",
     )
 
@@ -60,6 +60,7 @@ async def seed_database(db: AsyncSession):
     await storage.create_course_module(
         db, course_id=c1.id, title="Components & JSX", sort_order=1,
         quiz=QUIZ_REACT_COMPONENTS,
+        audio_url="/static/audio/lesson_1_en_382add5d.mp3",
         content="""## What Are React Components?
 
 React components are the fundamental building blocks of any React application. A component is a reusable piece of UI that can accept inputs (called **props**) and return React elements describing what should appear on the screen.

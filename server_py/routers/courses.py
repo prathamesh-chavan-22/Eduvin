@@ -13,16 +13,13 @@ from schemas import (
 import storage
 from services.mistral_ai import generate_course_outline, generate_chapter_content, generate_course_concept_graph
 from services.edge_tts_service import generate_audio
-from services.lip_sync_service import derive_lipsync_url, generate_lipsync_json
 
 logger = logging.getLogger(__name__)
 
 
 def module_to_out(module) -> dict:
-    """Serialize a module ORM object, injecting the derived lipSyncUrl."""
-    data = CourseModuleOut.model_validate(module).model_dump(by_alias=True)
-    data["lipSyncUrl"] = derive_lipsync_url(data.get("audioUrl"))
-    return data
+    """Serialize a module ORM object."""
+    return CourseModuleOut.model_validate(module).model_dump(by_alias=True)
 
 router = APIRouter(prefix="/api/courses", tags=["courses"])
 
@@ -109,15 +106,6 @@ async def _generate_course_pipeline(course_id: int, title: str, audience: str, d
                     filename = f"course_{course_id}_module_{mod_id}.mp3"
                     audio_url = await generate_audio(script, filename)
                     await storage.update_module_audio(db, mod_id, audio_url)
-
-                    # Generate lip-sync timeline JSON alongside the audio
-                    audio_path = f"server_py/static/audio/{filename}"
-                    timeline_path = f"server_py/static/audio/{filename[:-4]}.json"
-                    try:
-                        generate_lipsync_json(audio_path=audio_path, output_path=timeline_path)
-                    except Exception as lse:
-                        logger.warning(f"Lip-sync generation failed for module {mod_id}: {lse}")
-                        # Non-fatal: avatar falls back to idle state
                 except Exception as e:
                     logger.warning(f"Audio generation failed for module {mod_id}: {e}")
                     # Continue - audio is optional

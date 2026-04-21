@@ -103,7 +103,6 @@ export const api = {
             sortOrder: z.number(),
             quiz: z.string().nullable().optional(),
             audioUrl: z.string().nullable().optional(),
-            lipSyncUrl: z.string().nullable().optional(),
             images: z.array(z.string()).nullable().optional(),
           })
         ),

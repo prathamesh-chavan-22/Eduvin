@@ -1,6 +1,6 @@
 # Setup Guide
 
-Complete installation and configuration guide for EduVin AI.
+Complete installation and configuration guide for LMS AI.
 
 ## Table of Contents
 
@@ -120,10 +120,10 @@ Download and install from [PostgreSQL.org](https://www.postgresql.org/download/w
 #### macOS/Linux
 ```bash
 # Create database
-createdb eduvin_ai
+createdb lms_ai
 
 # Verify
-psql -l | grep eduvin_ai
+psql -l | grep lms_ai
 ```
 
 #### Using psql directly
@@ -132,15 +132,15 @@ psql -U postgres
 ```
 
 ```sql
-CREATE DATABASE eduvin_ai;
+CREATE DATABASE lms_ai;
 \q
 ```
 
 ### 3. Create Database User (Optional but recommended)
 
 ```sql
-CREATE USER eduvin_user WITH PASSWORD 'secure_password';
-GRANT ALL PRIVILEGES ON DATABASE eduvin_ai TO eduvin_user;
+CREATE USER lms_user WITH PASSWORD 'secure_password';
+GRANT ALL PRIVILEGES ON DATABASE lms_ai TO lms_user;
 ```
 
 ### 4. Push Database Schema
@@ -175,7 +175,7 @@ Edit `.env` with the following:
 
 ```env
 # Database Configuration
-DATABASE_URL=postgresql://eduvin_user:secure_password@localhost:5432/eduvin_ai
+DATABASE_URL=postgresql://lms_user:secure_password@localhost:5432/lms_ai
 
 # Session Security
 SESSION_SECRET=your-secret-key-change-this-in-production
@@ -234,7 +234,7 @@ npm run dev:client
 
 ```bash
 # Start tmux session
-tmux new -s eduvin
+tmux new -s lms
 
 # Split window
 Ctrl+B then "
@@ -280,9 +280,9 @@ INFO:     Database seeding complete
 
 | Role | Email | Password |
 |------|-------|----------|
-| L&D Admin | admin@eduvin.local | password |
-| Manager | manager@eduvin.local | password |
-| Employee | employee@eduvin.local | password |
+| L&D Admin | admin@lms.local | password |
+| Manager | manager@lms.local | password |
+| Employee | employee@lms.local | password |
 
 ---
 
@@ -302,7 +302,7 @@ Expected response:
 ### 2. Check Database Connection
 
 ```bash
-psql -d eduvin_ai -c "SELECT COUNT(*) FROM users;"
+psql -d lms_ai -c "SELECT COUNT(*) FROM users;"
 ```
 
 Expected output:
@@ -331,12 +331,12 @@ Should show no TypeScript errors.
 
 **Error:**
 ```
-asyncpg.exceptions.InvalidCatalogNameError: database "eduvin_ai" does not exist
+asyncpg.exceptions.InvalidCatalogNameError: database "lms_ai" does not exist
 ```
 
 **Solution:**
 ```bash
-createdb eduvin_ai
+createdb lms_ai
 npm run db:push
 ```
 
@@ -417,8 +417,8 @@ rm -rf __pycache__ routers/__pycache__ services/__pycache__
 
 ```bash
 # Drop and recreate database
-dropdb eduvin_ai
-createdb eduvin_ai
+dropdb lms_ai
+createdb lms_ai
 npm run db:push
 
 # Restart server to re-seed
@@ -440,8 +440,8 @@ services:
   db:
     image: postgres:14
     environment:
-      POSTGRES_DB: eduvin_ai
-      POSTGRES_USER: eduvin_user
+      POSTGRES_DB: lms_ai
+      POSTGRES_USER: lms_user
       POSTGRES_PASSWORD: secure_password
     ports:
       - "5432:5432"
@@ -453,7 +453,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      DATABASE_URL: postgresql://eduvin_user:secure_password@db:5432/eduvin_ai
+      DATABASE_URL: postgresql://lms_user:secure_password@db:5432/lms_ai
       SESSION_SECRET: your-secret-here
     depends_on:
       - db
@@ -483,7 +483,7 @@ docker-compose up -d
 If PostgreSQL is on a different server:
 
 ```env
-DATABASE_URL=postgresql://user:password@192.168.1.100:5432/eduvin_ai
+DATABASE_URL=postgresql://user:password@192.168.1.100:5432/lms_ai
 ```
 
 ### HTTPS in Development

@@ -2,7 +2,7 @@
 
 ## Overview
 
-EduVin AI is built on a modern, scalable architecture that separates concerns between presentation (React frontend), business logic (FastAPI backend), and data persistence (PostgreSQL).
+LMS AI is built on a modern, scalable architecture that separates concerns between presentation (React frontend), business logic (FastAPI backend), and data persistence (PostgreSQL).
 
 ## Architecture Diagram
 

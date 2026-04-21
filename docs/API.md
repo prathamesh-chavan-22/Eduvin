@@ -1,6 +1,6 @@
 # API Reference
 
-Complete REST API documentation for EduVin AI.
+Complete REST API documentation for LMS AI.
 
 ## Table of Contents
 
@@ -61,7 +61,7 @@ Authenticate user and create session.
 **Request Body:**
 ```json
 {
-  "email": "employee@eduvin.local",
+  "email": "employee@lms.local",
   "password": "password"
 }
 ```
@@ -70,7 +70,7 @@ Authenticate user and create session.
 ```json
 {
   "id": 1,
-  "email": "employee@eduvin.local",
+  "email": "employee@lms.local",
   "full_name": "John Doe",
   "role": "employee",
   "department_id": 1
@@ -108,7 +108,7 @@ Get current authenticated user.
 ```json
 {
   "id": 1,
-  "email": "employee@eduvin.local",
+  "email": "employee@lms.local",
   "full_name": "John Doe",
   "role": "employee",
   "department_id": 1,
@@ -138,7 +138,7 @@ List all users (Admin only).
 [
   {
     "id": 1,
-    "email": "employee@eduvin.local",
+    "email": "employee@lms.local",
     "full_name": "John Doe",
     "role": "employee",
     "department_id": 1,
@@ -157,7 +157,7 @@ Get current user's profile.
 ```json
 {
   "id": 1,
-  "email": "employee@eduvin.local",
+  "email": "employee@lms.local",
   "full_name": "John Doe",
   "role": "employee",
   "department_id": 1,
@@ -190,7 +190,7 @@ Update current user's profile.
 ```json
 {
   "id": 1,
-  "email": "employee@eduvin.local",
+  "email": "employee@lms.local",
   "full_name": "Jane Doe",
   "role": "employee",
   "notification_preferences": {
@@ -210,7 +210,7 @@ Get specific user details (Manager/Admin only).
 ```json
 {
   "id": 5,
-  "email": "team@eduvin.local",
+  "email": "team@lms.local",
   "full_name": "Team Member",
   "role": "employee",
   "manager_id": 2,

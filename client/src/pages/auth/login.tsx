@@ -161,7 +161,7 @@ export default function Login() {
             Empower your team with continuous learning.
           </h2>
           <p className="text-xl text-muted-foreground">
-            EduVin AI brings all your organizational knowledge into one accessible, interactive platform.
+            LMS AI brings all your organizational knowledge into one accessible, interactive platform.
           </p>
         </div>
       </div>

@@ -8,3 +8,8 @@ venv
 .venv
 *.pyc
 *.mp3
+*.png
+*.jpg
+*.jpeg
+*.log
+*.yml

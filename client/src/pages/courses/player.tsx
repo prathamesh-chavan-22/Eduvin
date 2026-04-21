@@ -554,7 +554,7 @@ export default function CoursePlayer() {
                           <div className="shrink-0 w-24 h-24">
                             <AvatarNarrator
                               audioRef={audioRef}
-                              lipSyncUrl={(activeModule as any).lipSyncUrl ?? null}
+                              audioUrl={(activeModule as any).audioUrl}
                             />
                           </div>
                           {/* Audio controls */}

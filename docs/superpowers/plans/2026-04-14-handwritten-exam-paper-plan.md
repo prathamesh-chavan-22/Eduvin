@@ -1509,7 +1509,7 @@ cd client && npm run dev
 2. Navigate to any course → "Exam Paper" tab
 3. Click "Generate Exam Paper" → wait for questions to appear
 4. Click "Download PDF" → verify PDF downloads
-5. Logout, login as employee (`employee@eduvin.local`)
+5. Logout, login as employee (`employee@lms.local`)
 6. Go to same course → "Exam Paper" tab
 7. Click "Upload Answer" → upload 1-2 photos of handwriting
 8. Submit → wait for Pixtral evaluation → verify score displays
