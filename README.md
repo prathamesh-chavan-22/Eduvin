@@ -60,6 +60,16 @@ This is the simplest setup — run the FastAPI backend directly without Node.js 
 - **Python** 3.11+
 - **PostgreSQL** 14+
 - **Node.js** 18+ and npm (only for building the frontend)
+- **Rhubarb Lip-Sync** *(optional — required for avatar lip-sync on newly generated courses)*
+  ```bash
+  # macOS (Homebrew — unofficial tap or direct download)
+  # Download the binary from https://github.com/DanielSWolf/rhubarb-lip-sync/releases
+  # and place it somewhere on your PATH, e.g.:
+  mv rhubarb /usr/local/bin/rhubarb
+  chmod +x /usr/local/bin/rhubarb
+  ```
+  If Rhubarb is not installed, courses still generate normally; the avatar will  
+  display in idle mode (closed mouth) while audio plays.
 
 #### 1. Clone the repository
 
@@ -221,6 +231,7 @@ nginx -c $(pwd)/nginx.conf
 ### AI/ML Services
 - **AI Tutor:** Mistral AI API
 - **TTS:** Edge TTS (Microsoft)
+- **Lip-Sync:** Rhubarb Lip-Sync CLI (phoneme timing from audio)
 - **Content Analysis:** Custom ML models
 
 ### DevOps
@@ -253,6 +264,7 @@ Web-App-Stack/
 │   ├── services/          # Business logic services
 │   │   ├── mistral_ai.py # AI integration
 │   │   ├── edge_tts_service.py
+│   │   ├── lip_sync_service.py # Rhubarb lip-sync invocation
 │   │   └── lesson_recommender.py
 │   ├── models.py          # SQLAlchemy models
 │   ├── schemas.py         # Pydantic schemas
@@ -274,6 +286,12 @@ Web-App-Stack/
 ```bash
 # Type checking (frontend)
 npm run check
+
+# Backend unit tests
+cd server_py && python3 -m unittest discover -s tests -v
+
+# Frontend viseme engine tests
+node --import tsx --test client/src/components/avatar/viseme.test.ts
 ```
 
 ---
