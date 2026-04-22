@@ -555,18 +555,23 @@ async def _generate_chunk_mindmap_llm(chunk_text: str, chunk_index: int) -> Dict
                     model_name,
                 )
 
+            logger.info(
+                "Successfully generated mindmap for chunk %s using model %s",
+                chunk_index,
+                model_name,
+            )
             return _normalize_llm_mindmap(raw, source_chunk=chunk_index)
         except Exception as e:
             last_error = e
             logger.warning(
-                "Mindmap model %s failed for chunk %s: %s",
+                "Mindmap model %s failed for chunk %s: %s (will retry with next model)",
                 model_name,
                 chunk_index,
-                e,
+                str(e)[:100],
             )
 
     raise ValueError(
-        f"All configured mindmap models failed for chunk {chunk_index}"
+        f"All configured mindmap models failed for chunk {chunk_index}: {str(last_error)}"
     ) from last_error
 
 

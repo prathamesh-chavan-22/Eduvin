@@ -217,15 +217,32 @@ async def process_audio_background(audio_id: int, file_path: str):
             audio_upload.status = "generating_mindmap"
             await db.commit()
 
-            try:
-                mindmap_data = await groq_service.generate_mindmap_from_transcript(transcript)
-                audio_upload.mindmap_data = mindmap_data
-            except Exception as e:
-                logger.warning(f"AI mindmap generation failed for {audio_id}: {e}")
-                # Use fallback
+            mindmap_data = None
+            last_error = None
+            
+            # Try LLM generation with retry
+            for attempt in range(1, 3):  # 2 attempts total
+                try:
+                    logger.info(f"Attempt {attempt} to generate mindmap for audio {audio_id}")
+                    mindmap_data = await groq_service.generate_mindmap_from_transcript(transcript)
+                    break  # Success, exit retry loop
+                except Exception as e:
+                    last_error = e
+                    logger.warning(
+                        f"AI mindmap generation attempt {attempt} failed for audio {audio_id}: {e}"
+                    )
+                    if attempt < 2:
+                        # Brief delay before retry
+                        import asyncio
+                        await asyncio.sleep(2)
+            
+            # Use fallback if all LLM attempts failed
+            if mindmap_data is None:
+                logger.warning(f"All LLM attempts failed for {audio_id}, using NLP-lite fallback")
                 mindmap_data = groq_service.generate_fallback_mindmap(transcript)
-                audio_upload.mindmap_data = mindmap_data
-                audio_upload.error_message = "AI generation failed, using fallback"
+                audio_upload.error_message = f"LLM generation failed after 2 attempts: {str(last_error)[:100]}. Using NLP-lite fallback."
+            
+            audio_upload.mindmap_data = mindmap_data
 
             # Mark as complete
             audio_upload.status = "ready"
