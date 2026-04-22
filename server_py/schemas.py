@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -19,7 +19,6 @@ class CamelModel(BaseModel):
 class UserOut(CamelModel):
     id: int
     email: str
-    password: str
     full_name: str
     role: str
     preferred_language: Optional[str] = None
@@ -157,7 +156,15 @@ class RegisterInput(CamelModel):
     email: str
     password: str
     full_name: str
-    role: str = "employee"
+    role: Literal["employee", "manager"] = "employee"
+    
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str) -> str:
+        allowed = {"employee", "manager"}
+        if v not in allowed:
+            raise ValueError(f"Role must be one of {allowed}")
+        return v
 
 
 class CreateCourse(CamelModel):

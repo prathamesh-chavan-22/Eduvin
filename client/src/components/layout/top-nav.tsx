@@ -16,18 +16,21 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
-import { useState, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const setter = useCallback((v: T) => {
+  
+  useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setDebounced(v), delay);
-  }, [delay]);
-  // Update debounced value via setter when value changes
-  setter(value);
+    timer.current = setTimeout(() => setDebounced(value), delay);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [value, delay]);
+  
   return debounced;
 }
 

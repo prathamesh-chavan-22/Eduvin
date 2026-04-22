@@ -46,9 +46,10 @@ async def _process_analysis(analysis_id: int, rows: list[dict], headers: list[st
                 await storage.update_analysis_status(db, analysis_id, status="failed")
                 return
 
-            # Step 1.5: Auto-create users from email column
+            # Step 1.5: Do NOT auto-create users from email column
+            # Instead, log a warning about missing users
             if email_col:
-                logger.info("Email column detected: '%s'. Auto-creating users from CSV.", email_col)
+                missing_users = []
                 for row in rows:
                     email = (row.get(email_col) or "").strip().lower()
                     if not email:
@@ -56,11 +57,14 @@ async def _process_analysis(analysis_id: int, rows: list[dict], headers: list[st
                     existing_user = await storage.get_user_by_email(db, email)
                     if existing_user is None:
                         emp_name = row.get(name_col, "Unknown Employee").strip()
-                        await storage.create_user(
-                            db, email=email, password="password",
-                            full_name=emp_name, role="employee",
-                        )
-                        logger.info("Created user account for: %s (%s)", emp_name, email)
+                        missing_users.append(f"{emp_name} ({email})")
+                
+                if missing_users:
+                    logger.warning(
+                        "The following users from the CSV do not have accounts: %s. "
+                        "Create these accounts manually before analyzing.",
+                        ", ".join(missing_users[:5])
+                    )
 
             # Get existing courses for matching
             course_data = await storage.get_courses(db)

@@ -1,15 +1,18 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useCourses } from "@/hooks/use-courses";
+import { useCourses, usePublishCourse } from "@/hooks/use-courses";
 import { Link } from "wouter";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, BookOpen, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CoursesList() {
   const { user } = useAuth();
   const { data: courses = [], isLoading } = useCourses();
+  const { mutate: publishCourse } = usePublishCourse();
+  const { toast } = useToast();
 
   const isLnd = user?.role === "l_and_d";
 
@@ -69,9 +72,21 @@ export default function CoursesList() {
                     className="shrink-0 text-xs h-8"
                     onClick={async (e) => {
                       e.preventDefault();
-                      await fetch(`/api/courses/${course.id}/publish`, { method: "PATCH" });
-                      // Trigger a refetch or simple page reload to reflect status
-                      window.location.reload();
+                      publishCourse(course.id, {
+                        onSuccess: () => {
+                          toast({
+                            title: "Success",
+                            description: `Course ${course.status === 'published' ? 'unpublished' : 'published'} successfully.`,
+                          });
+                        },
+                        onError: () => {
+                          toast({
+                            variant: "destructive",
+                            title: "Error",
+                            description: "Failed to update course status.",
+                          });
+                        },
+                      });
                     }}
                   >
                     {course.status === 'published' ? 'Unpublish' : 'Publish'}

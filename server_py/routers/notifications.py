@@ -24,4 +24,13 @@ async def mark_read(notification_id: int, user_id: int = Depends(require_auth), 
             status_code=404,
             media_type="application/json",
         )
+    
+    # Verify notification belongs to user
+    if notification.user_id != user_id:
+        return Response(
+            content=ErrorResponse(message="Not authorized to access this notification").model_dump_json(by_alias=True),
+            status_code=403,
+            media_type="application/json",
+        )
+    
     return NotificationOut.model_validate(notification).model_dump(by_alias=True)

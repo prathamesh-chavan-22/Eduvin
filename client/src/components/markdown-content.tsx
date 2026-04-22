@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
+import DOMPurify from "dompurify";
 import MermaidDiagram from "./mermaid-diagram";
 import type { Components } from "react-markdown";
 
@@ -152,14 +152,19 @@ const components: Components = {
 export default function MarkdownContent({ content }: MarkdownContentProps) {
     if (!content) return null;
 
+    const sanitized = DOMPurify.sanitize(content, {
+        ALLOWED_TAGS: ["b", "i", "em", "strong", "p", "br", "a", "ul", "ol", "li", "blockquote", "code", "pre", "h1", "h2", "h3", "h4", "h5", "h6", "table", "thead", "tbody", "tr", "th", "td", "hr", "div", "span"],
+        ALLOWED_ATTR: ["href", "target", "rel", "className"],
+        KEEP_CONTENT: true,
+    });
+
     return (
         <div className="markdown-content prose prose-slate dark:prose-invert max-w-none">
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw]}
                 components={components}
             >
-                {content}
+                {sanitized}
             </ReactMarkdown>
         </div>
     );

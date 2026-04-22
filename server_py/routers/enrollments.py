@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
+from dependencies import require_auth
 from schemas import (
     EnrollmentOut, EnrollmentDetailOut, CreateEnrollment, UpdateProgress,
     ErrorResponse, CourseDetailOut, CourseModuleOut, UserOut,
@@ -42,13 +43,33 @@ def _build_enrollment_detail(item: dict) -> dict:
 
 
 @router.get("")
-async def list_enrollments(userId: Optional[int] = None, db: AsyncSession = Depends(get_db)):
-    enrollments = await storage.get_enrollments(db, user_id=userId)
+async def list_enrollments(
+    userId: Optional[int] = None,
+    user_id: int = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    # Users can only see their own enrollments unless they have special role
+    effective_user_id = userId if userId else user_id
+    
+    user = await storage.get_user(db, user_id)
+    # Non-admin users can only access their own enrollments
+    if user and user.role not in ["l_and_d", "manager"] and effective_user_id != user_id:
+        return Response(
+            content=ErrorResponse(message="Not authorized to view other user's enrollments").model_dump_json(by_alias=True),
+            status_code=403,
+            media_type="application/json",
+        )
+    
+    enrollments = await storage.get_enrollments(db, user_id=effective_user_id)
     return [_build_enrollment_detail(item) for item in enrollments]
 
 
 @router.post("", status_code=201)
-async def create_enrollment(body: CreateEnrollment, db: AsyncSession = Depends(get_db)):
+async def create_enrollment(
+    body: CreateEnrollment,
+    user_id: int = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
     # Check if enrollment already exists
     from sqlalchemy import select
     from models import Enrollment
@@ -82,11 +103,31 @@ async def create_enrollment(body: CreateEnrollment, db: AsyncSession = Depends(g
 
 
 @router.patch("/{enrollment_id}/progress")
-async def update_progress(enrollment_id: int, body: UpdateProgress, db: AsyncSession = Depends(get_db)):
-    enrollment = await storage.update_enrollment_progress(
+async def update_progress(
+    enrollment_id: int,
+    body: UpdateProgress,
+    user_id: int = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify user owns this enrollment
+    enrollment = await storage.get_enrollment(db, enrollment_id)
+    if enrollment is None:
+        return Response(
+            content=ErrorResponse(message="Enrollment not found").model_dump_json(by_alias=True),
+            status_code=404,
+            media_type="application/json",
+        )
+    if enrollment.user_id != user_id:
+        return Response(
+            content=ErrorResponse(message="Not authorized to update this enrollment").model_dump_json(by_alias=True),
+            status_code=403,
+            media_type="application/json",
+        )
+    
+    updated = await storage.update_enrollment_progress(
         db, enrollment_id, progress_pct=body.progress_pct, status=body.status,
     )
-    if enrollment is None:
+    if updated is None:
         return Response(
             content=ErrorResponse(message="Enrollment not found").model_dump_json(by_alias=True),
             status_code=404,
@@ -94,12 +135,12 @@ async def update_progress(enrollment_id: int, body: UpdateProgress, db: AsyncSes
         )
     # Notify on completion
     if body.progress_pct == 100 or body.status == "completed":
-        course_data = await storage.get_course(db, enrollment.course_id)
+        course_data = await storage.get_course(db, updated.course_id)
         if course_data:
             course_title = course_data["course"].title
             await storage.create_notification(
-                db, user_id=enrollment.user_id,
+                db, user_id=updated.user_id,
                 title="Course Completed 🎉",
                 message=f"Congratulations! You have completed \"{course_title}\".",
             )
-    return EnrollmentOut.model_validate(enrollment).model_dump(by_alias=True)
+    return EnrollmentOut.model_validate(updated).model_dump(by_alias=True)

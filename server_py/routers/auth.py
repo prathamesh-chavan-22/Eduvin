@@ -5,6 +5,7 @@ from database import get_db
 from dependencies import get_current_user_id, require_auth
 from schemas import LoginInput, RegisterInput, UserOut, ErrorResponse, MessageResponse
 from session import create_session, delete_session, COOKIE_NAME, MAX_AGE_DAYS
+from security import verify_password
 import storage
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -13,7 +14,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 @router.post("/login")
 async def login(body: LoginInput, response: Response, db: AsyncSession = Depends(get_db)):
     user = await storage.get_user_by_email(db, body.email)
-    if not user or user.password != body.password:
+    if not user or not verify_password(body.password, user.password):
         return Response(
             content=ErrorResponse(message="Invalid email or password").model_dump_json(by_alias=True),
             status_code=401,
@@ -34,6 +35,14 @@ async def register(body: RegisterInput, response: Response, db: AsyncSession = D
     if existing:
         return Response(
             content=ErrorResponse(message="User already exists", field="email").model_dump_json(by_alias=True),
+            status_code=400,
+            media_type="application/json",
+        )
+
+    # Restrict to non-admin roles during registration (prevent role escalation)
+    if body.role not in ["employee", "manager"]:
+        return Response(
+            content=ErrorResponse(message="Invalid role", field="role").model_dump_json(by_alias=True),
             status_code=400,
             media_type="application/json",
         )
@@ -101,7 +110,7 @@ async def update_profile(
     if full_name:
         update_kwargs["full_name"] = full_name
     if current_password and new_password:
-        if user.password != current_password:
+        if not verify_password(current_password, user.password):
             return Response(
                 content=ErrorResponse(message="Current password is incorrect").model_dump_json(),
                 status_code=400, media_type="application/json",

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Response, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db, async_session_factory
+from dependencies import require_auth
 from schemas import (
     CourseListOut, CourseDetailOut, CourseOut, CourseModuleOut,
     CreateCourse, CreateModule, GenerateCourseInput, ErrorResponse, CourseConceptGraphOut,
@@ -225,10 +226,14 @@ async def list_courses(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", status_code=201)
-async def create_course(body: CreateCourse, db: AsyncSession = Depends(get_db)):
+async def create_course(
+    body: CreateCourse,
+    user_id: int = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
     course = await storage.create_course(
         db, title=body.title, description=body.description, status=body.status,
-        created_by=body.created_by, objectives=body.objectives,
+        created_by=user_id, objectives=body.objectives,
         audience=body.audience, depth=body.depth,
     )
     return CourseOut.model_validate(course).model_dump(by_alias=True)
@@ -238,6 +243,7 @@ async def create_course(body: CreateCourse, db: AsyncSession = Depends(get_db)):
 async def generate_course(
     body: GenerateCourseInput,
     background_tasks: BackgroundTasks,
+    user_id: int = Depends(require_auth),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a course and kick off AI generation in the background."""
@@ -246,6 +252,7 @@ async def generate_course(
         title=body.title,
         description="Generating...",
         status="draft",
+        created_by=user_id,
         audience=body.audience,
         depth=body.depth,
     )
@@ -356,8 +363,12 @@ async def regenerate_concept_graph(
 
 
 @router.patch("/{course_id}/publish")
-async def publish_course(course_id: int, db: AsyncSession = Depends(get_db)):
-    """Toggle course status between draft and published."""
+async def publish_course(
+    course_id: int,
+    user_id: int = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """Toggle course status between draft and published. User must be the creator."""
     data = await storage.get_course(db, course_id)
     if data is None:
         return Response(
@@ -366,6 +377,15 @@ async def publish_course(course_id: int, db: AsyncSession = Depends(get_db)):
             media_type="application/json",
         )
     course = data["course"]
+    
+    # Verify ownership
+    if course.created_by != user_id:
+        return Response(
+            content=ErrorResponse(message="Only the course creator can publish/unpublish").model_dump_json(by_alias=True),
+            status_code=403,
+            media_type="application/json",
+        )
+    
     new_status = "published" if course.status != "published" else "draft"
 
     from sqlalchemy import update as sa_update
@@ -383,7 +403,27 @@ async def publish_course(course_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/{course_id}/modules", status_code=201)
-async def create_module(course_id: int, body: CreateModule, db: AsyncSession = Depends(get_db)):
+async def create_module(
+    course_id: int,
+    body: CreateModule,
+    user_id: int = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify user owns the course
+    course = await storage.get_course(db, course_id)
+    if course is None:
+        return Response(
+            content=ErrorResponse(message="Course not found").model_dump_json(by_alias=True),
+            status_code=404,
+            media_type="application/json",
+        )
+    if course["course"].created_by != user_id:
+        return Response(
+            content=ErrorResponse(message="Only the course creator can add modules").model_dump_json(by_alias=True),
+            status_code=403,
+            media_type="application/json",
+        )
+    
     module = await storage.create_course_module(
         db, course_id=course_id, title=body.title,
         content=body.content, sort_order=body.sort_order, quiz=body.quiz,

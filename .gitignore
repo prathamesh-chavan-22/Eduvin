@@ -13,3 +13,4 @@ venv
 *.jpeg
 *.log
 *.yml
+.env.backup.local

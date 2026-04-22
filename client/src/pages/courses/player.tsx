@@ -205,65 +205,71 @@ export default function CoursePlayer() {
     }
 
     const title = course?.title ?? "Course";
-    const mermaidContent = JSON.stringify(conceptGraph.mermaid);
+    
+    // Safely build popup using DOM methods instead of document.write
+    popup.document.head.innerHTML = `
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width,initial-scale=1" />
+      <title>${title} - Concept Graph</title>
+      <style>
+        :root { color-scheme: light dark; }
+        body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #0f172a; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; background: #fff; position: sticky; top: 0; z-index: 10; }
+        .controls { display: flex; align-items: center; gap: 8px; }
+        button { border: 1px solid #cbd5e1; background: #fff; color: #0f172a; border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+        button:hover { background: #f1f5f9; }
+        #canvasWrap { height: calc(100vh - 62px); overflow: auto; padding: 16px; }
+        #canvas { transform-origin: top left; }
+        #graph { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; min-width: max-content; }
+      </style>
+      <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"><\/script>
+    `;
 
-    popup.document.open();
-    popup.document.write(`<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>${title} - Concept Graph</title>
-  <style>
-    :root { color-scheme: light dark; }
-    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #0f172a; }
-    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; background: #fff; position: sticky; top: 0; z-index: 10; }
-    .controls { display: flex; align-items: center; gap: 8px; }
-    button { border: 1px solid #cbd5e1; background: #fff; color: #0f172a; border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
-    button:hover { background: #f1f5f9; }
-    #canvasWrap { height: calc(100vh - 62px); overflow: auto; padding: 16px; }
-    #canvas { transform-origin: top left; }
-    #graph { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; min-width: max-content; }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-</head>
-<body>
-  <div class="topbar">
-    <div>
-      <strong>${title}</strong>
-      <div style="font-size:12px;color:#475569;">Concept Graph Viewer</div>
-    </div>
-    <div class="controls">
-      <button id="zoomOut">-</button>
-      <span id="zoomValue" style="font-size:12px; min-width:52px; text-align:center;">100%</span>
-      <button id="zoomIn">+</button>
-      <button id="reset">Reset</button>
-    </div>
-  </div>
-  <div id="canvasWrap">
-    <div id="canvas">
-      <div id="graph" class="mermaid"></div>
-    </div>
-  </div>
-  <script>
-    const graphEl = document.getElementById('graph');
-    const canvas = document.getElementById('canvas');
-    const zoomValue = document.getElementById('zoomValue');
-    let scale = 1;
-    const setScale = (next) => {
-      scale = Math.max(0.4, Math.min(3, next));
-      canvas.style.transform = 'scale(' + scale + ')';
-      zoomValue.textContent = Math.round(scale * 100) + '%';
-    };
-    document.getElementById('zoomIn').addEventListener('click', () => setScale(scale + 0.15));
-    document.getElementById('zoomOut').addEventListener('click', () => setScale(scale - 0.15));
-    document.getElementById('reset').addEventListener('click', () => setScale(1));
-    graphEl.textContent = ${mermaidContent};
-    mermaid.initialize({ startOnLoad: true, securityLevel: 'loose', theme: 'default' });
-  </script>
-</body>
-</html>`);
-    popup.document.close();
+    popup.document.body.innerHTML = `
+      <div class="topbar">
+        <div>
+          <strong>${title}</strong>
+          <div style="font-size:12px;color:#475569;">Concept Graph Viewer</div>
+        </div>
+        <div class="controls">
+          <button id="zoomOut">-</button>
+          <span id="zoomValue" style="font-size:12px; min-width:52px; text-align:center;">100%</span>
+          <button id="zoomIn">+</button>
+          <button id="reset">Reset</button>
+        </div>
+      </div>
+      <div id="canvasWrap">
+        <div id="canvas">
+          <div id="graph" class="mermaid"></div>
+        </div>
+      </div>
+    `;
+
+    // Setup mermaid content and controls after DOM is ready
+    popup.addEventListener('load', () => {
+      const graphEl = popup.document.getElementById('graph');
+      const canvas = popup.document.getElementById('canvas');
+      const zoomValue = popup.document.getElementById('zoomValue');
+      
+      if (graphEl) {
+        graphEl.textContent = conceptGraph.mermaid;
+      }
+      
+      let scale = 1;
+      const setScale = (next: number) => {
+        scale = Math.max(0.4, Math.min(3, next));
+        if (canvas) canvas.style.transform = `scale(${scale})`;
+        if (zoomValue) zoomValue.textContent = `${Math.round(scale * 100)}%`;
+      };
+      
+      popup.document.getElementById('zoomIn')?.addEventListener('click', () => setScale(scale + 0.15));
+      popup.document.getElementById('zoomOut')?.addEventListener('click', () => setScale(scale - 0.15));
+      popup.document.getElementById('reset')?.addEventListener('click', () => setScale(1));
+      
+      if (popup.mermaid) {
+        popup.mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', theme: 'default' });
+      }
+    });
   };
 
   return (

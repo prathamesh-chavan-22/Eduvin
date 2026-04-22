@@ -173,7 +173,8 @@ export function useUpdateLanguage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      // Invalidate the auth/me query since language preference is part of user profile
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/speaking/lessons"] });
     },
   });

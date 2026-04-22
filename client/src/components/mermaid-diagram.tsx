@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 mermaid.initialize({
     startOnLoad: false,
     theme: "default",
-    securityLevel: "loose",
+    securityLevel: "strict",
     fontFamily: "inherit",
 });
 
@@ -138,8 +138,14 @@ export default function MermaidDiagram({ chart, interactive = false }: MermaidDi
                 <div
                     className={`p-4 ${interactive ? "cursor-grab active:cursor-grabbing" : ""}`}
                     style={{ transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`, transformOrigin: "top left" }}
-                    dangerouslySetInnerHTML={{ __html: svg }}
-                />
+                >
+                    {svg && (
+                        <svg
+                            dangerouslySetInnerHTML={{ __html: svg }}
+                            style={{ width: "100%", height: "auto" }}
+                        />
+                    )}
+                </div>
             </div>
         </div>
     );

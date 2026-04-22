@@ -132,6 +132,15 @@ export const api = {
         404: errorSchemas.notFound,
       },
     },
+    publish: {
+      method: "PATCH" as const,
+      path: "/api/courses/:id/publish" as const,
+      responses: {
+        200: z.custom<typeof courses.$inferSelect>(),
+        403: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
+      },
+    },
     createModule: {
       method: "POST" as const,
       path: "/api/courses/:id/modules" as const,

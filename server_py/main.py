@@ -1,7 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import PORT
 from database import async_session_factory, engine
+from dependencies import require_admin
 from session import create_session_table
 from seed import seed_database
 from models import Base
@@ -74,8 +75,8 @@ app.include_router(exam_papers.router)
 
 # Admin: reset + re-seed database
 @app.post("/api/admin/reset-db")
-async def reset_db():
-    """Drop all tables, recreate schema, and re-seed."""
+async def reset_db(admin_id: int = Depends(require_admin)):
+    """Drop all tables, recreate schema, and re-seed. Requires admin role."""
     from models import Base
     # Drop and recreate all tables
     async with engine.begin() as conn:
@@ -110,9 +111,17 @@ if os.path.isdir(dist_dir):
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        file_path = os.path.join(dist_dir, full_path)
-        if os.path.isfile(file_path):
-            return FileResponse(file_path)
+        # Normalize and secure path to prevent directory traversal
+        import os.path
+        # Resolve path without following symlinks
+        requested_path = os.path.normpath(os.path.join(dist_dir, full_path))
+        # Ensure the resolved path is still within dist_dir
+        if not requested_path.startswith(os.path.normpath(dist_dir) + os.sep) and requested_path != os.path.normpath(dist_dir):
+            # Path tries to escape dist_dir, serve index.html (SPA fallback)
+            return FileResponse(os.path.join(dist_dir, "index.html"))
+        
+        if os.path.isfile(requested_path):
+            return FileResponse(requested_path)
         return FileResponse(os.path.join(dist_dir, "index.html"))
 
 

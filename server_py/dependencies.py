@@ -32,3 +32,15 @@ async def require_auth_with_role(
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user_id, user.role
+
+
+async def require_admin(
+    user_id: int = Depends(require_auth),
+    db: AsyncSession = Depends(get_db),
+) -> int:
+    """Requires admin role. Returns user_id if authorized."""
+    from storage import get_user
+    user = await get_user(db, user_id)
+    if not user or user.role != "l_and_d":
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return user_id

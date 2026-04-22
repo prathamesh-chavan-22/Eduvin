@@ -131,3 +131,22 @@ export function useRegenerateCourseConceptGraph(courseId: number) {
     },
   });
 }
+
+export function usePublishCourse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (courseId: number) => {
+      const url = buildUrl(api.courses.publish.path, { id: courseId });
+      const res = await fetch(url, {
+        method: api.courses.publish.method,
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to publish/unpublish course");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.courses.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.courses.get.path] });
+    },
+  });
+}

@@ -5,6 +5,7 @@ from sqlalchemy import select, update, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import User, Course, CourseModule, CourseConceptGraph, Enrollment, Notification, SpeakingPractice, SpeakingTopic, SpeakingLesson, UserLessonProgress, WorkflowAnalysis, AnalysisResult, LearnerProfile, TutorMessage, ExamPaper, ExamPaperConfig, ExamAttempt
+from security import hash_password
 
 
 # --- Users ---
@@ -21,7 +22,8 @@ async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
 
 
 async def create_user(db: AsyncSession, *, email: str, password: str, full_name: str, role: str = "employee") -> User:
-    user = User(email=email, password=password, full_name=full_name, role=role)
+    hashed_password = hash_password(password)
+    user = User(email=email, password=hashed_password, full_name=full_name, role=role)
     db.add(user)
     await db.commit()
     await db.refresh(user)
@@ -839,7 +841,7 @@ async def update_user(db: AsyncSession, user_id: int, *,
     if full_name is not None:
         user.full_name = full_name
     if password is not None:
-        user.password = password
+        user.password = hash_password(password)
     await db.commit()
     await db.refresh(user)
     return user
