@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface UseExamTimerReturn {
   remainingSeconds: number;
@@ -11,11 +11,18 @@ interface UseExamTimerReturn {
 
 export function useExamTimer(
   initialSeconds: number,
-  onExpire?: () => void
+  onExpire?: () => void,
+  warningThresholdSeconds: number = 300
 ): UseExamTimerReturn {
-  const [remainingSeconds, setRemainingSeconds] = useState(initialSeconds);
+  // Validate input
+  const validatedSeconds = Math.max(0, Math.floor(initialSeconds));
+
+  const [remainingSeconds, setRemainingSeconds] = useState(validatedSeconds);
   const [isPaused, setIsPaused] = useState(false);
   const [hasExpired, setHasExpired] = useState(false);
+
+  // Prevent double onExpire callback
+  const hasExpiredRef = useRef(false);
 
   useEffect(() => {
     if (isPaused || hasExpired) return;
@@ -29,24 +36,22 @@ export function useExamTimer(
       setRemainingSeconds((prev) => {
         if (prev <= 0) return 0;
         const next = prev - 1;
-        if (next <= 0) {
+        if (next <= 0 && !hasExpiredRef.current) {
+          hasExpiredRef.current = true;
           setHasExpired(true);
           onExpire?.();
+          return 0;
         }
         return next;
       });
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [remainingSeconds, isPaused, hasExpired, onExpire]);
+  }, [isPaused, hasExpired, onExpire]);
 
-  const timerLabel = useCallback(() => {
-    const minutes = Math.floor(remainingSeconds / 60);
-    const seconds = remainingSeconds % 60;
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }, [remainingSeconds])();
+  const timerLabel = `${String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:${String(remainingSeconds % 60).padStart(2, "0")}`;
 
-  const isTimeWarning = remainingSeconds < 300 && remainingSeconds > 0;
+  const isTimeWarning = remainingSeconds < warningThresholdSeconds && remainingSeconds > 0;
 
   const pause = useCallback(() => {
     setIsPaused(true);

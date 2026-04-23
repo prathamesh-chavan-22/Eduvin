@@ -102,4 +102,23 @@ describe("useExamTimer", () => {
     const { result } = renderHook(() => useExamTimer(300)); // 5:00
     expect(result.current.isTimeWarning).toBe(false);
   });
+
+  test("allows configurable warning threshold", () => {
+    const { result } = renderHook(() => useExamTimer(350, undefined, 300));
+    expect(result.current.isTimeWarning).toBe(false);
+    
+    const { result: result2 } = renderHook(() => useExamTimer(250, undefined, 300));
+    expect(result2.current.isTimeWarning).toBe(true);
+  });
+
+  test("works without onExpire callback", () => {
+    const { result } = renderHook(() => useExamTimer(2)); // No callback
+    
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    
+    expect(result.current.isExpired).toBe(true);
+    expect(result.current.remainingSeconds).toBe(0);
+  });
 });
