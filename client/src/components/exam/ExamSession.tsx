@@ -29,7 +29,7 @@ export function ExamSession({ paperId }: ExamSessionProps) {
   const handleTimerExpire = useCallback(() => {
     if (!session || submitted) return;
     handleSubmit();
-  }, [session, submitted]);
+  }, [session, submitted, handleSubmit]);
 
   const { remainingSeconds } = useExamTimer(
     session ? session.durationMinutes * 60 : 0,
@@ -56,7 +56,7 @@ export function ExamSession({ paperId }: ExamSessionProps) {
     }
   };
 
-  const handleExit = () => {
+  const handleExit = useCallback(() => {
     if (
       window.confirm(
         "Are you sure? Your exam will be submitted with current answers."
@@ -64,15 +64,15 @@ export function ExamSession({ paperId }: ExamSessionProps) {
     ) {
       handleSubmit();
     }
-  };
+  }, [handleSubmit]);
 
-  const updateAnswer = (index: number, value: string | number) => {
+  const updateAnswer = useCallback((index: number, value: string | number) => {
     setAnswers((prev) => {
       const next = new Map(prev);
       next.set(index, value);
       return next;
     });
-  };
+  }, []);
 
   const toggleReviewFlag = (index: number) => {
     setReviewFlags((prev) => {
@@ -86,11 +86,11 @@ export function ExamSession({ paperId }: ExamSessionProps) {
     });
   };
 
-  const selectQuestion = (index: number) => {
+  const selectQuestion = useCallback((index: number) => {
     if (index >= 0 && index < (session?.questions.length || 0)) {
       setCurrentQuestionIndex(index);
     }
-  };
+  }, [session?.questions.length]);
 
   const goNext = () => {
     if (currentQuestionIndex < (session?.questions.length || 0) - 1) {
@@ -104,7 +104,7 @@ export function ExamSession({ paperId }: ExamSessionProps) {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!session || submitLiveExam.isPending || submitted) return;
 
     const unansweredCount = session.questions.filter(
@@ -137,7 +137,7 @@ export function ExamSession({ paperId }: ExamSessionProps) {
         description: error?.message || "Please retry.",
       });
     }
-  };
+  }, [session, submitLiveExam, submitted, answers, toast]);
 
   if (!session) {
     return (

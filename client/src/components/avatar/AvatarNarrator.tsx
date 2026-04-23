@@ -70,6 +70,7 @@ export default function AvatarNarrator({ audioRef, audioUrl }: Props) {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const rafIdRef = useRef<number>(0);
+  const currentVisemeRef = useRef<string>("X");
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -123,6 +124,11 @@ export default function AvatarNarrator({ audioRef, audioUrl }: Props) {
 
       if (!sourceRef.current && audioContextRef.current && analyserRef.current) {
         try {
+          // Ensure CORS for Web Audio API processing
+          if (audio.crossOrigin !== "anonymous") {
+            audio.crossOrigin = "anonymous";
+          }
+          
           sourceRef.current = audioContextRef.current.createMediaElementSource(audio);
           sourceRef.current.connect(analyserRef.current);
           analyserRef.current.connect(audioContextRef.current.destination);
@@ -160,13 +166,22 @@ export default function AvatarNarrator({ audioRef, audioUrl }: Props) {
 
         // Map average volume to viseme
         // Typical speech average volume in byte frequency data is 30-80
-        if (average < 2) setViseme("X");
-        else if (average < 15) setViseme("A");
-        else if (average < 35) setViseme("B");
-        else if (average < 60) setViseme("C");
-        else setViseme("D");
+        let nextViseme = "X";
+        if (average < 2) nextViseme = "X";
+        else if (average < 15) nextViseme = "A";
+        else if (average < 35) nextViseme = "B";
+        else if (average < 60) nextViseme = "C";
+        else nextViseme = "D";
+
+        if (nextViseme !== currentVisemeRef.current) {
+          setViseme(nextViseme);
+          currentVisemeRef.current = nextViseme;
+        }
       } else if (audio?.paused || audio?.ended) {
-        setViseme("X");
+        if (currentVisemeRef.current !== "X") {
+          setViseme("X");
+          currentVisemeRef.current = "X";
+        }
       }
       
       rafIdRef.current = requestAnimationFrame(tick);
@@ -177,6 +192,10 @@ export default function AvatarNarrator({ audioRef, audioUrl }: Props) {
     return () => {
       audio.removeEventListener("play", handlePlay);
       cancelAnimationFrame(rafIdRef.current);
+      // Close context to free up browser audio resources
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        audioContextRef.current.close();
+      }
     };
   }, [audioRef]);
 
@@ -215,57 +234,73 @@ export default function AvatarNarrator({ audioRef, audioUrl }: Props) {
           <stop offset="0%" stopColor="#b07b62" stopOpacity="0.8" />
           <stop offset="100%" stopColor="#e0a382" stopOpacity="0.1" />
         </linearGradient>
+        
+        <style>
+          {`
+            @keyframes breathe {
+              0%, 100% { transform: translateY(0) scaleY(1); }
+              50% { transform: translateY(-0.5px) scaleY(1.01); }
+            }
+            .avatar-body {
+              animation: breathe 4s ease-in-out infinite;
+              transform-origin: bottom center;
+            }
+          `}
+        </style>
       </defs>
 
       {/* Background Shadow */}
       <ellipse cx="60" cy="116" rx="35" ry="4" fill="black" opacity="0.15" />
 
-      {/* Back Hair - fuller bob style */}
-      <path d="M 22 55 C 10 75, 10 115, 30 120 L 90 120 C 110 115, 110 75, 98 55 C 98 -5, 22 -5, 22 55 Z" fill="url(#hairGrad)" />
-      
-      {/* Neck */}
-      <path d="M 50 80 L 70 80 L 68 102 L 52 102 Z" fill="url(#skinGrad)" />
-      {/* Neck Shadow under chin */}
-      <path d="M 50 80 L 70 80 L 69 88 L 51 88 Z" fill="url(#neckShadow)" />
+      {/* Avatar Group for Breathing Animation */}
+      <g className="avatar-body">
+        {/* Back Hair - fuller bob style */}
+        <path d="M 22 55 C 10 75, 10 115, 30 120 L 90 120 C 110 115, 110 75, 98 55 C 98 -5, 22 -5, 22 55 Z" fill="url(#hairGrad)" />
+        
+        {/* Neck */}
+        <path d="M 50 80 L 70 80 L 68 102 L 52 102 Z" fill="url(#skinGrad)" />
+        {/* Neck Shadow under chin */}
+        <path d="M 50 80 L 70 80 L 69 88 L 51 88 Z" fill="url(#neckShadow)" />
 
-      {/* Torso/Shirt */}
-      <path d="M 35 120 C 35 95, 45 90, 60 90 C 75 90, 85 95, 85 120 Z" fill="url(#shirtGrad)" />
-      {/* Shoulders / Arms */}
-      <path d="M 35 95 C 20 100, 15 110, 15 120 L 35 120 Z" fill="url(#shirtGrad)" />
-      <path d="M 85 95 C 100 100, 105 110, 105 120 L 85 120 Z" fill="url(#shirtGrad)" />
-      {/* Collar */}
-      <path d="M 50 90 C 55 94, 65 94, 70 90 L 60 100 Z" fill="#1e3a8a" />
+        {/* Torso/Shirt */}
+        <path d="M 35 120 C 35 95, 45 90, 60 90 C 75 90, 85 95, 85 120 Z" fill="url(#shirtGrad)" />
+        {/* Shoulders / Arms */}
+        <path d="M 35 95 C 20 100, 15 110, 15 120 L 35 120 Z" fill="url(#shirtGrad)" />
+        <path d="M 85 95 C 100 100, 105 110, 105 120 L 85 120 Z" fill="url(#shirtGrad)" />
+        {/* Collar */}
+        <path d="M 50 90 C 55 94, 65 94, 70 90 L 60 100 Z" fill="#1e3a8a" />
 
-      {/* Head (Base) - Soft friendly shape */}
-      <ellipse cx="60" cy="55" rx="30" ry="32" fill="url(#skinGrad)" />
-      
-      {/* Cheeks */}
-      <ellipse cx="42" cy="62" rx="7" ry="4" fill="#ffb6b9" opacity="0.5" />
-      <ellipse cx="78" cy="62" rx="7" ry="4" fill="#ffb6b9" opacity="0.5" />
+        {/* Head (Base) - Soft friendly shape */}
+        <ellipse cx="60" cy="55" rx="30" ry="32" fill="url(#skinGrad)" />
+        
+        {/* Cheeks */}
+        <ellipse cx="42" cy="62" rx="7" ry="4" fill="#ffb6b9" opacity="0.5" />
+        <ellipse cx="78" cy="62" rx="7" ry="4" fill="#ffb6b9" opacity="0.5" />
 
-      {/* Eyes */}
-      <Eye cx={45} cy={53} blink={blink} dx={eyeOffset.dx} dy={eyeOffset.dy} />
-      <Eye cx={75} cy={53} blink={blink} dx={eyeOffset.dx} dy={eyeOffset.dy} />
+        {/* Eyes */}
+        <Eye cx={45} cy={53} blink={blink} dx={eyeOffset.dx} dy={eyeOffset.dy} />
+        <Eye cx={75} cy={53} blink={blink} dx={eyeOffset.dx} dy={eyeOffset.dy} />
 
-      {/* Eyebrows */}
-      <path d="M 36 45 Q 44 41 51 42" stroke="#4a2e1b" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <path d="M 84 45 Q 76 41 69 42" stroke="#4a2e1b" strokeWidth="3" fill="none" strokeLinecap="round" />
+        {/* Eyebrows */}
+        <path d="M 36 45 Q 44 41 51 42" stroke="#4a2e1b" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <path d="M 84 45 Q 76 41 69 42" stroke="#4a2e1b" strokeWidth="3" fill="none" strokeLinecap="round" />
 
-      {/* Nose - soft and simple */}
-      <path d="M 58 64 Q 60 67 62 64" stroke="#c07e60" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.7" />
+        {/* Nose - soft and simple */}
+        <path d="M 58 64 Q 60 67 62 64" stroke="#c07e60" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.7" />
 
-      {mouthShape}
+        {mouthShape}
 
-      {/* Front Hair / Bangs */}
-      <path d="M 28 50 C 28 5, 92 5, 92 50 C 92 65, 85 70, 80 50 C 75 25, 65 25, 60 32 C 55 25, 45 25, 40 50 C 35 70, 28 65, 28 50 Z" fill="url(#hairGrad)" />
-      
-      {/* Side Hair Strands - more defined */}
-      <path d="M 30 45 C 22 75, 28 105, 40 115 C 45 95, 38 65, 38 45 Z" fill="url(#hairGrad)" />
-      <path d="M 90 45 C 98 75, 92 105, 80 115 C 75 95, 82 65, 82 45 Z" fill="url(#hairGrad)" />
-      
-      {/* Hair Highlights */}
-      <path d="M 40 20 Q 50 15 60 20" stroke="#6b452c" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
-      <path d="M 60 20 Q 70 15 80 20" stroke="#6b452c" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
+        {/* Front Hair / Bangs */}
+        <path d="M 28 50 C 28 5, 92 5, 92 50 C 92 65, 85 70, 80 50 C 75 25, 65 25, 60 32 C 55 25, 45 25, 40 50 C 35 70, 28 65, 28 50 Z" fill="url(#hairGrad)" />
+        
+        {/* Side Hair Strands - more defined */}
+        <path d="M 30 45 C 22 75, 28 105, 40 115 C 45 95, 38 65, 38 45 Z" fill="url(#hairGrad)" />
+        <path d="M 90 45 C 98 75, 92 105, 80 115 C 75 95, 82 65, 82 45 Z" fill="url(#hairGrad)" />
+        
+        {/* Hair Highlights */}
+        <path d="M 40 20 Q 50 15 60 20" stroke="#6b452c" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
+        <path d="M 60 20 Q 70 15 80 20" stroke="#6b452c" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
+      </g>
 
     </svg>
   );
