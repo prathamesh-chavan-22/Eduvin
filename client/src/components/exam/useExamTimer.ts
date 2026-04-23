@@ -24,10 +24,25 @@ export function useExamTimer(
   // Prevent double onExpire callback
   const hasExpiredRef = useRef(false);
 
+  // Sync remainingSeconds when initialSeconds changes (e.g. when session is loaded)
   useEffect(() => {
-    if (isPaused || hasExpired) return;
+    if (validatedSeconds > 0) {
+      if (remainingSeconds === 0 && !hasExpiredRef.current) {
+        setRemainingSeconds(validatedSeconds);
+      }
+      if (hasExpired) {
+        setHasExpired(false);
+        hasExpiredRef.current = false;
+      }
+    }
+  }, [validatedSeconds, remainingSeconds, hasExpired]);
+
+  useEffect(() => {
+    if (isPaused || hasExpired || validatedSeconds <= 0) return;
+    
     if (remainingSeconds <= 0) {
       setHasExpired(true);
+      hasExpiredRef.current = true;
       onExpire?.();
       return;
     }

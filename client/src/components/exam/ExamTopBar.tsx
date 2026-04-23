@@ -27,7 +27,7 @@ export function ExamTopBar({
   const seconds = remainingSeconds % 60;
   const timerLabel = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   const isTimeWarning = remainingSeconds < 300 && remainingSeconds > 0;
-  const isTimeExpired = remainingSeconds === 0;
+  const isTimeExpired = remainingSeconds === 0 && totalSeconds > 0;
 
   return (
     <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-50 shadow-sm">
