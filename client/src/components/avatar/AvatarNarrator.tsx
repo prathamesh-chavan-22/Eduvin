@@ -13,44 +13,50 @@ type Props = {
 
 // ─── Mouth shape paths ───────────────────────────────────────────────────────
 const MOUTH_SHAPES: Record<string, React.ReactNode> = {
-  A: <ellipse cx="60" cy="74" rx="9" ry="3" fill="#c62828" />,
-  B: <ellipse cx="60" cy="74" rx="7" ry="5" fill="#c62828" />,
-  C: <ellipse cx="60" cy="74" rx="11" ry="6" fill="#b71c1c" />,
+  A: (
+    <g>
+      <ellipse cx="60" cy="74" rx="6" ry="3" fill="#691a1a" />
+      <ellipse cx="60" cy="75" rx="4" ry="1.5" fill="#ef4444" opacity="0.8" />
+    </g>
+  ),
+  B: (
+    <g>
+      <ellipse cx="60" cy="74" rx="5" ry="4" fill="#691a1a" />
+      <path d="M 56 72 Q 60 74 64 72 L 64 73 Q 60 75 56 73 Z" fill="#ffffff" opacity="0.9" />
+    </g>
+  ),
+  C: (
+    <g>
+      <ellipse cx="60" cy="74" rx="8" ry="5" fill="#691a1a" />
+      <path d="M 54 71.5 Q 60 74 66 71.5 Q 60 75 54 71.5 Z" fill="#ffffff" opacity="0.9" />
+      <ellipse cx="60" cy="76" rx="4" ry="2" fill="#ef4444" opacity="0.8" />
+    </g>
+  ),
   D: (
     <g>
-      <ellipse cx="60" cy="74" rx="13" ry="8" fill="#b71c1c" />
-      <ellipse cx="60" cy="76" rx="10" ry="4" fill="#7b1fa2" opacity="0.6" />
+      <ellipse cx="60" cy="75" rx="10" ry="7" fill="#691a1a" />
+      <path d="M 52 71 Q 60 74 68 71 Q 60 75 52 71 Z" fill="#ffffff" opacity="0.9" />
+      <ellipse cx="60" cy="78" rx="6" ry="3" fill="#ef4444" opacity="0.9" />
     </g>
   ),
   X: (
-    <path
-      d="M52 74 Q60 77 68 74"
-      stroke="#c62828"
-      strokeWidth="2.5"
-      fill="none"
-      strokeLinecap="round"
-    />
+    <path d="M 55 74 Q 60 76 65 74" stroke="#8b4513" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.8" />
   ),
 };
 
 function Eye({ cx, cy = 54, blink, dx = 0, dy = 0 }: { cx: number; cy?: number; blink: boolean; dx?: number; dy?: number }) {
   return blink ? (
-    <line
-      x1={cx - 7}
-      y1={cy + 2}
-      x2={cx + 7}
-      y2={cy + 2}
-      stroke="#2d1b0e"
-      strokeWidth="3"
-      strokeLinecap="round"
-    />
+    <g>
+      <path d={`M ${cx - 8} ${cy + 2} Q ${cx} ${cy + 4} ${cx + 8} ${cy + 2}`} stroke="#2d1b0e" strokeWidth="3" fill="none" strokeLinecap="round" />
+    </g>
   ) : (
     <g>
-      <ellipse cx={cx} cy={cy} rx="7" ry="8.5" fill="white" />
-      <ellipse cx={cx + dx} cy={cy + 1 + dy} rx="4.5" ry="5.5" fill="#1e3a8a" />
-      <ellipse cx={cx + dx} cy={cy + 1.5 + dy} rx="2" ry="3" fill="#0d0d0d" />
-      <circle cx={cx - 1.5 + dx} cy={cy - 2 + dy} r="1.8" fill="white" />
-      <circle cx={cx + 2 + dx} cy={cy + 3 + dy} r="0.8" fill="white" opacity="0.8" />
+      <ellipse cx={cx} cy={cy} rx="8.5" ry="9.5" fill="#ffffff" />
+      <ellipse cx={cx + dx} cy={cy + 1 + dy} rx="5" ry="6" fill="url(#irisGrad)" />
+      <ellipse cx={cx + dx} cy={cy + 1.5 + dy} rx="2.5" ry="3.5" fill="#0f172a" />
+      <circle cx={cx - 1.5 + dx} cy={cy - 2 + dy} r="2" fill="white" opacity="0.9" />
+      <circle cx={cx + 2 + dx} cy={cy + 3 + dy} r="1" fill="white" opacity="0.5" />
+      <path d={`M ${cx - 8} ${cy - 2} Q ${cx} ${cy - 10} ${cx + 8} ${cy - 2}`} stroke="#2d1b0e" strokeWidth="2.5" fill="none" strokeLinecap="round" />
     </g>
   );
 }
@@ -185,50 +191,82 @@ export default function AvatarNarrator({ audioRef, audioUrl }: Props) {
       role="img"
       className="w-full h-full select-none"
     >
+      <defs>
+        <radialGradient id="skinGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="30%" stopColor="#ffeadf" />
+          <stop offset="85%" stopColor="#f5c7ad" />
+          <stop offset="100%" stopColor="#e0a382" />
+        </radialGradient>
+        <radialGradient id="irisGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="30%" stopColor="#60a5fa" />
+          <stop offset="80%" stopColor="#1e3a8a" />
+          <stop offset="100%" stopColor="#0f172a" />
+        </radialGradient>
+        <linearGradient id="hairGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#4a2e1b" />
+          <stop offset="50%" stopColor="#2d1b0e" />
+          <stop offset="100%" stopColor="#160d07" />
+        </linearGradient>
+        <linearGradient id="shirtGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="20%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#1e3a8a" />
+        </linearGradient>
+        <linearGradient id="neckShadow" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#b07b62" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#e0a382" stopOpacity="0.1" />
+        </linearGradient>
+      </defs>
+
       {/* Background Shadow */}
-      <ellipse cx="60" cy="116" rx="35" ry="4" fill="black" opacity="0.1" />
+      <ellipse cx="60" cy="116" rx="35" ry="4" fill="black" opacity="0.15" />
 
       {/* Back Hair */}
-      <path d="M 30 50 C 20 70, 20 110, 35 120 L 85 120 C 100 110, 100 70, 90 50 C 90 0, 30 0, 30 50 Z" fill="#2d1b0e" />
+      <path d="M 28 50 C 15 70, 15 110, 35 120 L 85 120 C 105 110, 105 70, 92 50 C 92 0, 28 0, 28 50 Z" fill="url(#hairGrad)" />
       
       {/* Neck */}
-      <path d="M 50 80 L 70 80 L 68 100 L 52 100 Z" fill="#f5c7ad" />
-      <path d="M 50 80 L 70 80 L 69 88 L 51 88 Z" fill="#e0a382" opacity="0.6" />
+      <path d="M 50 80 L 70 80 L 68 102 L 52 102 Z" fill="url(#skinGrad)" />
+      {/* Neck Shadow under chin */}
+      <path d="M 50 80 L 70 80 L 69 88 L 51 88 Z" fill="url(#neckShadow)" />
 
       {/* Torso/Shirt */}
-      <path d="M 35 120 C 35 95, 45 90, 60 90 C 75 90, 85 95, 85 120 Z" fill="#2563eb" />
+      <path d="M 35 120 C 35 95, 45 90, 60 90 C 75 90, 85 95, 85 120 Z" fill="url(#shirtGrad)" />
       {/* Shoulders / Arms */}
-      <path d="M 35 95 C 25 100, 20 110, 20 120 L 35 120 Z" fill="#3b82f6" />
-      <path d="M 85 95 C 95 100, 100 110, 100 120 L 85 120 Z" fill="#3b82f6" />
+      <path d="M 35 95 C 20 100, 15 110, 15 120 L 35 120 Z" fill="url(#shirtGrad)" />
+      <path d="M 85 95 C 100 100, 105 110, 105 120 L 85 120 Z" fill="url(#shirtGrad)" />
       {/* Collar */}
-      <path d="M 52 90 L 68 90 L 60 98 Z" fill="#1e40af" />
+      <path d="M 50 90 C 55 94, 65 94, 70 90 L 60 100 Z" fill="#1e3a8a" />
 
-      {/* Head (Base) */}
-      <ellipse cx="60" cy="55" rx="28" ry="32" fill="#ffe0d2" />
+      {/* Head (Base) - Soft friendly shape */}
+      <ellipse cx="60" cy="55" rx="30" ry="32" fill="url(#skinGrad)" />
       
       {/* Cheeks */}
-      <ellipse cx="42" cy="62" rx="5" ry="3" fill="#ffb6b9" opacity="0.7" />
-      <ellipse cx="78" cy="62" rx="5" ry="3" fill="#ffb6b9" opacity="0.7" />
+      <ellipse cx="42" cy="62" rx="7" ry="4" fill="#ffb6b9" opacity="0.5" />
+      <ellipse cx="78" cy="62" rx="7" ry="4" fill="#ffb6b9" opacity="0.5" />
 
       {/* Eyes */}
-      <Eye cx={46} cy={54} blink={blink} dx={eyeOffset.dx} dy={eyeOffset.dy} />
-      <Eye cx={74} cy={54} blink={blink} dx={eyeOffset.dx} dy={eyeOffset.dy} />
+      <Eye cx={45} cy={53} blink={blink} dx={eyeOffset.dx} dy={eyeOffset.dy} />
+      <Eye cx={75} cy={53} blink={blink} dx={eyeOffset.dx} dy={eyeOffset.dy} />
 
       {/* Eyebrows */}
-      <path d="M 38 46 Q 46 42 52 46" stroke="#2d1b0e" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-      <path d="M 82 46 Q 74 42 68 46" stroke="#2d1b0e" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      <path d="M 36 45 Q 44 41 51 42" stroke="#4a2e1b" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M 84 45 Q 76 41 69 42" stroke="#4a2e1b" strokeWidth="3" fill="none" strokeLinecap="round" />
 
-      {/* Nose */}
-      <path d="M 60 62 C 60 62, 58 65, 60 66 C 62 65, 60 62, 60 62 Z" fill="#e0a382" />
+      {/* Nose - soft and simple */}
+      <path d="M 58 64 Q 60 67 62 64" stroke="#c07e60" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.7" />
 
       {mouthShape}
 
       {/* Front Hair / Bangs */}
-      <path d="M 28 50 C 28 0, 92 0, 92 50 C 92 60, 85 65, 80 50 C 75 35, 65 35, 60 40 C 55 35, 45 35, 40 50 C 35 65, 28 60, 28 50 Z" fill="#2d1b0e" />
+      <path d="M 28 50 C 28 5, 92 5, 92 50 C 92 65, 85 70, 80 50 C 75 25, 65 25, 60 32 C 55 25, 45 25, 40 50 C 35 70, 28 65, 28 50 Z" fill="url(#hairGrad)" />
       
       {/* Side Hair Strands */}
-      <path d="M 32 45 C 28 70, 32 90, 38 100 C 42 80, 38 60, 38 45 Z" fill="#3a2312" />
-      <path d="M 88 45 C 92 70, 88 90, 82 100 C 78 80, 82 60, 82 45 Z" fill="#3a2312" />
+      <path d="M 31 42 C 25 70, 30 95, 38 105 C 43 85, 38 60, 38 42 Z" fill="url(#hairGrad)" />
+      <path d="M 89 42 C 95 70, 90 95, 82 105 C 77 85, 82 60, 82 42 Z" fill="url(#hairGrad)" />
+      
+      {/* Hair Highlights */}
+      <path d="M 40 20 Q 50 15 60 20" stroke="#6b452c" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
+      <path d="M 60 20 Q 70 15 80 20" stroke="#6b452c" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
+
     </svg>
   );
 }
