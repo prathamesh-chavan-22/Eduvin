@@ -141,15 +141,40 @@ export function ExamSession({ paperId }: ExamSessionProps) {
 
   if (!session) {
     return (
-      <Card className="p-4 space-y-3">
-        <p className="text-sm text-muted-foreground">
-          Live mode is enabled for this exam. Start when you're ready; timer starts immediately.
-        </p>
-        <Button onClick={begin} disabled={!canStart}>
-          {startLiveExam.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Start Live Exam
-        </Button>
-      </Card>
+      <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+        <Card className="max-w-md w-full p-8 space-y-6 shadow-xl border-primary/10">
+          <div className="text-center space-y-2">
+            <h2 className="text-3xl font-bold text-primary">Ready to Start?</h2>
+            <p className="text-muted-foreground">
+              This is a timed live exam. Once you click start, the timer will begin and you will enter full-screen mode.
+            </p>
+          </div>
+          
+          <div className="bg-primary/5 p-4 rounded-lg border border-primary/10 text-sm">
+            <ul className="space-y-2 text-primary/80">
+              <li className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" /> Focused environment
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" /> Automatic submission on timeout
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" /> No browser navigation allowed
+              </li>
+            </ul>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <Button onClick={begin} size="lg" className="w-full font-bold h-12" disabled={!canStart}>
+              {startLiveExam.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Begin Live Exam
+            </Button>
+            <Button variant="ghost" onClick={() => window.history.back()} className="w-full">
+              Back to Course
+            </Button>
+          </div>
+        </Card>
+      </div>
     );
   }
 

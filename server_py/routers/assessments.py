@@ -46,37 +46,87 @@ async def get_history(
     user_id: int = Depends(require_auth),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return past assessment results for the current user."""
-    assessments = await storage.get_assessment_history(db, user_id)
-    result = []
-    for a in assessments:
-        # Get module title
-        module_title = "Unknown"
+    """Return past assessment results (quizzes AND exams) for the current user."""
+    from models import Assessment, ExamAttempt, Course, CourseModule, ExamPaper
+    from sqlalchemy import select, desc
+    
+    # 1. Fetch Module Quizzes
+    res1 = await db.execute(
+        select(Assessment)
+        .where(Assessment.user_id == user_id)
+        .order_by(desc(Assessment.submitted_at))
+    )
+    quizzes = res1.scalars().all()
+    
+    # 2. Fetch Exam Attempts
+    res2 = await db.execute(
+        select(ExamAttempt)
+        .where(ExamAttempt.user_id == user_id)
+        .order_by(desc(ExamAttempt.submitted_at))
+    )
+    exams = res2.scalars().all()
+    
+    combined = []
+    
+    # Process Quizzes
+    for a in quizzes:
+        module_title = "Unknown Module"
+        course_title = "Unknown Course"
         try:
-            from sqlalchemy import select
-            from models import CourseModule, Course
             mod_q = await db.execute(select(CourseModule).where(CourseModule.id == a.module_id))
             mod = mod_q.scalar_one_or_none()
             if mod:
                 module_title = mod.title
                 course_q = await db.execute(select(Course).where(Course.id == mod.course_id))
                 course = course_q.scalar_one_or_none()
-                course_title = course.title if course else "Unknown"
-            else:
-                course_title = "Unknown"
+                course_title = course.title if course else "Unknown Course"
         except Exception:
-            course_title = "Unknown"
-        result.append({
-            "id": a.id,
+            pass
+            
+        combined.append({
+            "id": f"q_{a.id}",
             "moduleId": a.module_id,
             "moduleTitle": module_title,
             "courseId": a.course_id,
             "courseTitle": course_title,
             "score": a.score,
-            "answers": a.answers,
+            "type": "quiz",
             "submittedAt": a.submitted_at.isoformat() if a.submitted_at else None,
         })
-    return result
+        
+    # Process Exams
+    for e in exams:
+        course_title = "Unknown Course"
+        exam_title = "Final Exam"
+        try:
+            paper_q = await db.execute(select(ExamPaper).where(ExamPaper.id == e.exam_paper_id))
+            paper = paper_q.scalar_one_or_none()
+            if paper:
+                course_q = await db.execute(select(Course).where(Course.id == paper.course_id))
+                course = course_q.scalar_one_or_none()
+                course_title = course.title if course else "Unknown Course"
+                exam_title = f"{course_title} - Final Exam"
+        except Exception:
+            pass
+            
+        score_val = None
+        if e.score is not None and e.total_marks:
+            score_val = round((e.score / e.total_marks) * 100, 1)
+            
+        combined.append({
+            "id": f"e_{e.id}",
+            "moduleId": 0, # Exams are course-level
+            "moduleTitle": exam_title,
+            "courseId": paper.course_id if paper else 0, 
+            "courseTitle": course_title,
+            "score": score_val,
+            "type": "exam",
+            "submittedAt": e.submitted_at.isoformat() if e.submitted_at else None,
+        })
+    
+    # Sort combined by submittedAt desc
+    combined.sort(key=lambda x: x["submittedAt"] or "", reverse=True)
+    return combined
 
 
 @router.post("/submit")

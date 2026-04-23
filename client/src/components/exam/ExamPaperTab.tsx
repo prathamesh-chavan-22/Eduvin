@@ -11,8 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { Download, Upload, FileText, Loader2 } from "lucide-react";
 import ExamUploadDialog from "./ExamUploadDialog";
 import ExamResultsView from "./ExamResultsView";
-import LiveExamPanel from "./LiveExamPanel";
+import { Link } from "wouter";
 import { useUsers } from "@/hooks/use-users";
+import { Card } from "@/components/ui/card";
 
 interface Props {
   courseId: number;
@@ -227,7 +228,22 @@ export default function ExamPaperTab({ courseId }: Props) {
       </div>
 
       {user?.role === "employee" && paper.liveEnabled && (
-        <LiveExamPanel paperId={paper.id} />
+        <Card className="p-6 bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20 shadow-md">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="space-y-1 text-center md:text-left">
+              <h4 className="text-xl font-bold text-primary">Live Exam Session Ready</h4>
+              <p className="text-sm text-muted-foreground max-w-md">
+                This course has an interactive live exam. Once started, you'll enter a full-screen mode with a timer.
+                Ensure you have a stable connection.
+              </p>
+            </div>
+            <Link href={`/exams/${paper.id}`}>
+              <Button size="lg" className="px-8 font-semibold shadow-lg hover:scale-105 transition-transform">
+                Start Live Exam
+              </Button>
+            </Link>
+          </div>
+        </Card>
       )}
 
       {showUpload && (

@@ -220,8 +220,8 @@ export default function AvatarNarrator({ audioRef, audioUrl }: Props) {
       {/* Background Shadow */}
       <ellipse cx="60" cy="116" rx="35" ry="4" fill="black" opacity="0.15" />
 
-      {/* Back Hair */}
-      <path d="M 28 50 C 15 70, 15 110, 35 120 L 85 120 C 105 110, 105 70, 92 50 C 92 0, 28 0, 28 50 Z" fill="url(#hairGrad)" />
+      {/* Back Hair - fuller bob style */}
+      <path d="M 22 55 C 10 75, 10 115, 30 120 L 90 120 C 110 115, 110 75, 98 55 C 98 -5, 22 -5, 22 55 Z" fill="url(#hairGrad)" />
       
       {/* Neck */}
       <path d="M 50 80 L 70 80 L 68 102 L 52 102 Z" fill="url(#skinGrad)" />
@@ -259,9 +259,9 @@ export default function AvatarNarrator({ audioRef, audioUrl }: Props) {
       {/* Front Hair / Bangs */}
       <path d="M 28 50 C 28 5, 92 5, 92 50 C 92 65, 85 70, 80 50 C 75 25, 65 25, 60 32 C 55 25, 45 25, 40 50 C 35 70, 28 65, 28 50 Z" fill="url(#hairGrad)" />
       
-      {/* Side Hair Strands */}
-      <path d="M 31 42 C 25 70, 30 95, 38 105 C 43 85, 38 60, 38 42 Z" fill="url(#hairGrad)" />
-      <path d="M 89 42 C 95 70, 90 95, 82 105 C 77 85, 82 60, 82 42 Z" fill="url(#hairGrad)" />
+      {/* Side Hair Strands - more defined */}
+      <path d="M 30 45 C 22 75, 28 105, 40 115 C 45 95, 38 65, 38 45 Z" fill="url(#hairGrad)" />
+      <path d="M 90 45 C 98 75, 92 105, 80 115 C 75 95, 82 65, 82 45 Z" fill="url(#hairGrad)" />
       
       {/* Hair Highlights */}
       <path d="M 40 20 Q 50 15 60 20" stroke="#6b452c" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />

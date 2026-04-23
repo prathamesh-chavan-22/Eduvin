@@ -102,6 +102,40 @@ async def create_enrollment(
     return EnrollmentOut.model_validate(enrollment).model_dump(by_alias=True)
 
 
+@router.get("/{enrollment_id}/progress")
+async def get_progress(
+    enrollment_id: int,
+    user_id: int = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """Fetch current progress for an enrollment."""
+    item = await storage.get_enrollment(db, enrollment_id)
+    if not item:
+        return Response(
+            content=ErrorResponse(message="Enrollment not found").model_dump_json(by_alias=True),
+            status_code=404,
+            media_type="application/json",
+        )
+    
+    e = item["enrollment"]
+    if e.user_id != user_id:
+        # Check if user is manager/admin
+        user = await storage.get_user(db, user_id)
+        if not user or user.role not in ["l_and_d", "manager"]:
+            return Response(
+                content=ErrorResponse(message="Not authorized").model_dump_json(by_alias=True),
+                status_code=403,
+                media_type="application/json",
+            )
+            
+    return {
+        "progressPct": e.progress_pct,
+        "status": e.status,
+        "startedAt": e.started_at.isoformat() if e.started_at else None,
+        "completedAt": e.completed_at.isoformat() if e.completed_at else None,
+    }
+
+
 @router.patch("/{enrollment_id}/progress")
 async def update_progress(
     enrollment_id: int,
@@ -109,15 +143,18 @@ async def update_progress(
     user_id: int = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
+    """Update progress for an enrollment."""
     # Verify user owns this enrollment
-    enrollment = await storage.get_enrollment(db, enrollment_id)
-    if enrollment is None:
+    item = await storage.get_enrollment(db, enrollment_id)
+    if item is None:
         return Response(
             content=ErrorResponse(message="Enrollment not found").model_dump_json(by_alias=True),
             status_code=404,
             media_type="application/json",
         )
-    if enrollment.user_id != user_id:
+    
+    e = item["enrollment"]
+    if e.user_id != user_id:
         return Response(
             content=ErrorResponse(message="Not authorized to update this enrollment").model_dump_json(by_alias=True),
             status_code=403,
@@ -133,14 +170,20 @@ async def update_progress(
             status_code=404,
             media_type="application/json",
         )
+        
     # Notify on completion
     if body.progress_pct == 100 or body.status == "completed":
-        course_data = await storage.get_course(db, updated.course_id)
-        if course_data:
-            course_title = course_data["course"].title
-            await storage.create_notification(
-                db, user_id=updated.user_id,
-                title="Course Completed 🎉",
-                message=f"Congratulations! You have completed \"{course_title}\".",
-            )
+        try:
+            course_data = await storage.get_course(db, updated.course_id)
+            if course_data:
+                course_title = course_data["course"].title
+                await storage.create_notification(
+                    db, user_id=updated.user_id,
+                    title="Course Completed 🎉",
+                    message=f"Congratulations! You have completed \"{course_title}\".",
+                )
+        except Exception as err:
+            # Don't fail the whole request if notification fails
+            print(f"Failed to send completion notification: {err}")
+            
     return EnrollmentOut.model_validate(updated).model_dump(by_alias=True)

@@ -24,6 +24,7 @@ import Settings from "./pages/settings/index";
 import Notifications from "./pages/notifications/index";
 import AudioUploadPage from "./pages/audio/index";
 import MindmapViewerPage from "./pages/audio/[id]";
+import ExamSessionPage from "./pages/exams/session";
 
 function ProtectedRoute({ component: Component, ...rest }: any) {
   return (
@@ -59,6 +60,7 @@ function Router() {
       <ProtectedRoute path="/team" component={TeamManagement} />
       <ProtectedRoute path="/audio" component={AudioUploadPage} />
       <ProtectedRoute path="/audio/:id" component={MindmapViewerPage} />
+      <Route path="/exams/:id" component={ExamSessionPage} />
 
       <Route component={NotFound} />
     </Switch>
