@@ -177,25 +177,28 @@ async def get_paper_by_course(
 async def get_paper(
     paper_id: int,
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(require_auth),
+    auth: tuple[int, str] = Depends(require_auth_with_role),
 ):
+    user_id, user_role = auth
     paper = await storage.get_exam_paper(db, paper_id)
     if not paper:
         raise HTTPException(status_code=404, detail="Exam paper not found")
 
-    # Verify user is enrolled in the course
-    from sqlalchemy import select
-    from models import Enrollment
-    enrollment_result = await db.execute(
-        select(Enrollment).where(
-            Enrollment.user_id == user_id,
-            Enrollment.course_id == paper.course_id
+    # Allow admin (l_and_d) and manager roles to bypass enrollment check
+    if user_role not in ["l_and_d", "manager"]:
+        # Verify user is enrolled in the course for regular employees
+        from sqlalchemy import select
+        from models import Enrollment
+        enrollment_result = await db.execute(
+            select(Enrollment).where(
+                Enrollment.user_id == user_id,
+                Enrollment.course_id == paper.course_id
+            )
         )
-    )
-    enrollment = enrollment_result.scalar_one_or_none()
-    
-    if not enrollment:
-        raise HTTPException(status_code=403, detail="Not enrolled in this course")
+        enrollment = enrollment_result.scalar_one_or_none()
+        
+        if not enrollment:
+            raise HTTPException(status_code=403, detail="Not enrolled in this course")
 
     return await _serialize_paper(db, paper)
 
@@ -204,25 +207,28 @@ async def get_paper(
 async def download_pdf(
     paper_id: int,
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(require_auth),
+    auth: tuple[int, str] = Depends(require_auth_with_role),
 ):
+    user_id, user_role = auth
     paper = await storage.get_exam_paper(db, paper_id)
     if not paper:
         raise HTTPException(status_code=404, detail="Exam paper not found")
 
-    # Verify user is enrolled in the course
-    from sqlalchemy import select
-    from models import Enrollment
-    enrollment_result = await db.execute(
-        select(Enrollment).where(
-            Enrollment.user_id == user_id,
-            Enrollment.course_id == paper.course_id
+    # Allow admin (l_and_d) and manager roles to bypass enrollment check
+    if user_role not in ["l_and_d", "manager"]:
+        # Verify user is enrolled in the course for regular employees
+        from sqlalchemy import select
+        from models import Enrollment
+        enrollment_result = await db.execute(
+            select(Enrollment).where(
+                Enrollment.user_id == user_id,
+                Enrollment.course_id == paper.course_id
+            )
         )
-    )
-    enrollment = enrollment_result.scalar_one_or_none()
-    
-    if not enrollment:
-        raise HTTPException(status_code=403, detail="Not enrolled in this course")
+        enrollment = enrollment_result.scalar_one_or_none()
+        
+        if not enrollment:
+            raise HTTPException(status_code=403, detail="Not enrolled in this course")
 
     course_data = await storage.get_course(db, paper.course_id)
     course_title = course_data["course"].title if course_data else "Exam Paper"
