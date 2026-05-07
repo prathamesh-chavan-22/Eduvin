@@ -1,0 +1,58 @@
+from typing import Optional
+
+from fastapi import Request, HTTPException, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from database import get_db
+from session import get_session_user_id, COOKIE_NAME
+
+
+async def get_current_user_id(request: Request, db: AsyncSession = Depends(get_db)) -> Optional[int]:
+    sid = request.cookies.get(COOKIE_NAME)
+    if not sid:
+        return None
+    return await get_session_user_id(db, sid)
+
+
+async def require_auth(user_id: Optional[int] = Depends(get_current_user_id)) -> int:
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user_id
+
+
+async def require_auth_with_role(
+    user_id: Optional[int] = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> tuple[int, str]:
+    """Returns (user_id, role). Raises 401 if not authenticated."""
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    from storage import get_user
+    user = await get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user_id, user.role
+
+
+async def require_admin(
+    user_id: int = Depends(require_auth),
+    db: AsyncSession = Depends(get_db),
+) -> int:
+    """Requires admin role. Returns user_id if authorized."""
+    from storage import get_user
+    user = await get_user(db, user_id)
+    if not user or user.role != "l_and_d":
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return user_id
+
+
+async def require_manager_or_admin(
+    user_id: int = Depends(require_auth),
+    db: AsyncSession = Depends(get_db),
+) -> int:
+    """Requires manager or admin role. Returns user_id if authorized."""
+    from storage import get_user
+    user = await get_user(db, user_id)
+    if not user or user.role not in {"l_and_d", "manager"}:
+        raise HTTPException(status_code=403, detail="Manager/Admin role required")
+    return user_id
