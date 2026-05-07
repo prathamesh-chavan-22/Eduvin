@@ -18,3 +18,5 @@ deepface>=0.0.90
 opencv-python-headless>=4.10.0
 pandas>=2.2.0
 numpy>=1.26.0
+passlib>=1.7.0
+tf-keras>=2.14.0
