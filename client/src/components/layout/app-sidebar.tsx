@@ -13,6 +13,8 @@ import {
   ClipboardCheck,
   BarChart3,
   Headphones,
+  Camera,
+  UserPlus,
 } from "lucide-react";
 import {
   Sidebar,
@@ -45,6 +47,10 @@ export function AppSidebar() {
     { title: "Course Library", icon: BookOpen, url: "/courses", roles: ["l_and_d", "employee"] },
     { title: "Team Progress", icon: Users, url: "/team", roles: ["manager", "l_and_d"] },
     { title: "AI Course Builder", icon: Wand2, url: "/generator", roles: ["l_and_d"] },
+    { title: "Mark Attendance", icon: Camera, url: "/attendance/mark", roles: ["l_and_d", "manager", "employee"] },
+    { title: "Register Face", icon: UserPlus, url: "/attendance/register", roles: ["l_and_d", "manager"] },
+    { title: "Registered Employees", icon: Users, url: "/attendance/registered", roles: ["l_and_d", "manager"] },
+    { title: "Attendance List", icon: ClipboardCheck, url: "/attendance/list", roles: ["l_and_d", "manager"] },
   ];
 
   const visibleRoutes = routes.filter(r => r.roles.includes(role));

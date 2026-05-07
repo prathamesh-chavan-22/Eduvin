@@ -1,0 +1,36 @@
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - generic [ref=e3]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - img [ref=e8]
+        - generic [ref=e11]: Welcome back
+        - generic [ref=e12]: Sign in to your learning account
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - button "Continue with Google" [ref=e16] [cursor=pointer]:
+            - img
+            - text: Continue with Google
+          - button "Continue with Microsoft" [ref=e17] [cursor=pointer]:
+            - img
+            - text: Continue with Microsoft
+        - generic [ref=e22]: Or continue with email
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - text: Email
+            - textbox "Email" [ref=e25]:
+              - /placeholder: name@example.com
+              - text: employee@eduvin.local
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - generic [ref=e28]: Password
+              - button "Forgot password?" [ref=e29] [cursor=pointer]
+            - textbox "Password" [ref=e30]: password
+        - button [disabled]:
+          - img
+    - generic [ref=e32]:
+      - img "Students learning abstract" [ref=e34]
+      - generic [ref=e35]:
+        - heading "Empower your team with continuous learning." [level=2] [ref=e36]
+        - paragraph [ref=e37]: EduVin AI brings all your organizational knowledge into one accessible, interactive platform.

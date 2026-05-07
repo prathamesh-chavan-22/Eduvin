@@ -1,4 +1,65 @@
-__pycache__/
-*.pyc
+# Python Virtual Environments
+venv/
 .venv/
+env/
+ENV/
+__pycache__/
+*.egg-info/
+*.dist-info/
+.Python
+
+# Python Cache & Compiled Files
+*.pyc
+*.pyo
+*.pyd
+*.so
+.mypy_cache/
+.pytest_cache/
+.dmypy.json
+dmypy.json
+
+# Environment Variables
 .env
+.env.local
+.env.*.local
+.env.backup*
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+debug.txt
+debug_face.txt
+
+# Test Coverage
+coverage/
+htmlcov/
+.coverage
+.coverage.*
+
+# Logs
+*.log
+logs/
+
+# IDE/Linting
+.pylint.d/
+.flake8
+.isort.cfg
+
+# OS Specific
+.DS_Store
+Thumbs.db
+.local/
+
+# Temporary Files
+*.tmp
+*.bak
+*.swp

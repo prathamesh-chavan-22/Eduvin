@@ -1,16 +1,102 @@
-node_modules
-dist
+# Frontend Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+
+.env
+*.env
+.env.example
+# Frontend Build Output
+dist/
+build/
+.next/
+out/
+
+# Python/Backend Dependencies
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.egg-info/
+*.dist-info/
+.Python
+
+# Python Cache
+*.pyc
+*.pyo
+*.pyd
+.mypy_cache/
+.pytest_cache/
+.dmypy.json
+dmypy.json
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+edtech_lms_backup_*.sql
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.backup*
+.env.example (use as reference, don't commit local versions)
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.replit
 .DS_Store
-server/public
+Thumbs.db
+
+# Local/User Specific
+.local/
+.qwen/
+.cache/
+.history/
+
+# Test & Debug Files
+test-results/
+coverage/
+htmlcov/
+debug.txt
+debug_face.txt
+test_employees_*.csv
+
+# Build/Compilation
 vite.config.ts.*
 *.tar.gz
-venv
-.venv
-*.pyc
+*.zip
+
+# Logs
+*.log
+logs/
+*.log*
+
+# Media (if very large)
 *.mp3
+*.wav
+*.mp4
+*.mov
+
+# OS Specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary Files
+*.tmp
+*.bak
+*.swp
+server/public
 *.png
 *.jpg
 *.jpeg
-*.log
 *.yml
-.env.backup.local

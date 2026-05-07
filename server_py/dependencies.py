@@ -44,3 +44,15 @@ async def require_admin(
     if not user or user.role != "l_and_d":
         raise HTTPException(status_code=403, detail="Admin role required")
     return user_id
+
+
+async def require_manager_or_admin(
+    user_id: int = Depends(require_auth),
+    db: AsyncSession = Depends(get_db),
+) -> int:
+    """Requires manager or admin role. Returns user_id if authorized."""
+    from storage import get_user
+    user = await get_user(db, user_id)
+    if not user or user.role not in {"l_and_d", "manager"}:
+        raise HTTPException(status_code=403, detail="Manager/Admin role required")
+    return user_id

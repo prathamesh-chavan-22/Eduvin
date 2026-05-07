@@ -25,6 +25,10 @@ import Notifications from "./pages/notifications/index";
 import AudioUploadPage from "./pages/audio/index";
 import MindmapViewerPage from "./pages/audio/[id]";
 import ExamSessionPage from "./pages/exams/session";
+import MarkAttendance from "./pages/attendance/mark";
+import RegisterFace from "./pages/attendance/register";
+import AttendanceList from "./pages/attendance/list";
+import RegisteredEmployees from "./pages/attendance/registered";
 
 function ProtectedRoute({ component: Component, ...rest }: any) {
   return (
@@ -61,6 +65,10 @@ function Router() {
       <ProtectedRoute path="/audio" component={AudioUploadPage} />
       <ProtectedRoute path="/audio/:id" component={MindmapViewerPage} />
       <Route path="/exams/:id" component={ExamSessionPage} />
+      <ProtectedRoute path="/attendance/mark" component={MarkAttendance} />
+      <ProtectedRoute path="/attendance/register" component={RegisterFace} />
+      <ProtectedRoute path="/attendance/registered" component={RegisteredEmployees} />
+      <ProtectedRoute path="/attendance/list" component={AttendanceList} />
 
       <Route component={NotFound} />
     </Switch>

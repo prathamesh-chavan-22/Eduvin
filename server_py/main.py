@@ -14,8 +14,7 @@ from dependencies import require_admin
 from session import create_session_table
 from seed import seed_database
 from models import Base
-
-from routers import auth, users, courses, enrollments, notifications, speaking, analysis, tutor, analytics, assessments, audio, exam_papers
+from routers import auth, users, courses, enrollments, notifications, speaking, analysis, tutor, analytics, assessments, audio, exam_papers, attendance
 
 
 @asynccontextmanager
@@ -71,6 +70,7 @@ app.include_router(analytics.router)
 app.include_router(assessments.router)
 app.include_router(audio.router)
 app.include_router(exam_papers.router)
+app.include_router(attendance.router)
 
 
 # Admin: reset + re-seed database

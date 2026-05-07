@@ -18,6 +18,21 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(Text, nullable=False)
     role: Mapped[str] = mapped_column(Text, nullable=False, server_default="employee")
     preferred_language: Mapped[Optional[str]] = mapped_column(Text, nullable=True, server_default="en")
+    face_embedding: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
+
+
+class Attendance(Base):
+    __tablename__ = "attendances"
+    __table_args__ = (
+        Index('idx_attendances_user_date', 'user_id', 'date'),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    date: Mapped[str] = mapped_column(Text, nullable=False)
+    time: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="Present")
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
 
 
