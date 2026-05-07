@@ -3,6 +3,10 @@ node_modules/
 package-lock.json
 yarn.lock
 
+
+.env
+*.env
+.env.example
 # Frontend Build Output
 dist/
 build/
